@@ -1,0 +1,19 @@
+{
+  "name": "mmu-hostel-booking",
+  "version": "3.0.0",
+  "description": "Mountains of the Moon University – Student Hostel Booking System",
+  "private": true,
+  "scripts": {
+    "dev":     "npx serve . --cors --listen 3000",
+    "preview": "npx serve . --listen 3000",
+    "lint":    "npx eslint js/**/*.js"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["mmu", "hostel", "booking", "uganda"],
+  "author": "Mountains of the Moon University"
+}
