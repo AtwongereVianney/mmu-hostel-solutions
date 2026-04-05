@@ -9,7 +9,6 @@
 'use strict';
 
 import { state } from '../state.js';
-import { e }     from '../utils.js';
 
 export function renderNav() {
   const { view, adminMode } = state;

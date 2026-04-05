@@ -9,7 +9,7 @@
 'use strict';
 
 import { escapeHtml, safeImgSrc } from './security.js';
-import { hostels, bookings }      from './state.js';
+import { hostels }      from './state.js';
 
 /* Re-export escapeHtml as the short alias used throughout templates */
 export const e = escapeHtml;

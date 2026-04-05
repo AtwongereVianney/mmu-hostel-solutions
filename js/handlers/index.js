@@ -20,8 +20,8 @@ import { saveData }  from '../storage.js';
 import { showToast } from '../components/toast.js';
 import {
   sanitize, validate, hashPassword,
-  getCsrfToken, verifyCsrfToken,
-  isAuthenticated, createSession, destroySession,
+  verifyCsrfToken,
+  createSession, destroySession,
   recordFailedLogin, resetBruteForce, isLoginLocked, loginDelay, getBruteForceState,
   auditLog, canBook, countBooking,
   validateImageFile, safeImgSrc,
