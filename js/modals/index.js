@@ -391,9 +391,9 @@ function modalBooking() {
       </div>
       <div>
         <label class="lbl">Registration Number *</label>
-        <input id="fR" type="text" maxlength="20" class="inp uppercase" placeholder="MMU/2023/001"
+        <input id="fR" type="text" maxlength="40" class="inp uppercase" placeholder="2026/U/MMU/CCS/0000001"
                value="${e(bd.regNo ?? '')}" oninput="App.liveVal(this,'regNo')"/>
-        <div class="text-xs text-gray-400 mt-1">Format: MMU/YYYY/NNN</div>
+        <div class="text-xs text-gray-400 mt-1">Format: YYYY/U/MMU/COURSE/NNNNNNN</div>
       </div>
       <div>
         <label class="lbl">Year of Study *</label>

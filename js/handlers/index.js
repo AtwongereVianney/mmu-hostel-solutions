@@ -273,7 +273,7 @@ export function bStep1() {
   if (!name)                      { _fieldErr('s1e', 'Full name is required.'); return; }
   if (!validate('name', name))    { _fieldErr('s1e', 'Name: letters and spaces only (2–80 chars).'); return; }
   if (!reg)                       { _fieldErr('s1e', 'Registration number is required.'); return; }
-  if (!validate('regNo', reg))    { _fieldErr('s1e', 'Invalid format. Use: MMU/YYYY/NNN'); return; }
+  if (!validate('regNo', reg))    { _fieldErr('s1e', 'Invalid format. Use: YYYY/U/MMU/COURSE/NNNNNNN'); return; }
   if (!year)                      { _fieldErr('s1e', 'Please select your year of study.'); return; }
 
   const dup = bookings.find(b => b.regNo.toUpperCase() === reg && b.hostelId === state.selH);
@@ -367,7 +367,7 @@ export function lookupBooking() {
     return;
   }
   if (!validate('regNo', raw)) {
-    resEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm">⚠️ Invalid format. Use: MMU/YYYY/NNN</div>`;
+    resEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm">⚠️ Invalid format. Use: YYYY/U/MMU/COURSE/NNNNNNN</div>`;
     return;
   }
 

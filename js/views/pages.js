@@ -154,11 +154,11 @@ export function renderMyBookings() {
   <div class="bg-white rounded-xl shadow-card p-5 mb-5 max-w-md">
     <label class="lbl">Student Registration Number</label>
     <div class="flex gap-2">
-      <input id="regIn" type="text" maxlength="20" placeholder="MMU/2023/001" class="inp flex-1"
+      <input id="regIn" type="text" maxlength="40" placeholder="2026/U/MMU/CCS/0000001" class="inp flex-1"
              onkeydown="if(event.key==='Enter') App.lookupBooking()"/>
       <button onclick="App.lookupBooking()" class="btn-g">Search</button>
     </div>
-    <div class="text-xs text-gray-400 mt-1">Format: MMU/YYYY/NNN</div>
+    <div class="text-xs text-gray-400 mt-1">Format: YYYY/U/MMU/COURSE/NNNNNNN</div>
   </div>
 
   <div id="bkResult"></div>

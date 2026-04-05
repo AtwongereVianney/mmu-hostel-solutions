@@ -42,7 +42,7 @@ export function safeImgSrc(src) {
 
 // [3] Validation patterns
 export const PATTERNS = Object.freeze({
-  regNo: /^MMU\/\d{4}\/\d{3,4}$/i,
+  regNo: /^\d{4}\/U\/MMU\/[A-Z0-9]{2,10}\/\d{7}$/i,
   phone: /^(\+?256|0)[0-9]{9}$/,
   email: /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/,
   name:  /^[a-zA-Z\s'\-]{2,80}$/,
