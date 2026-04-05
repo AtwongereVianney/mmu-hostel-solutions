@@ -13,7 +13,7 @@ import { hostels, bookings }      from './state.js';
 
 /* Re-export escapeHtml as the short alias used throughout templates */
 export const e = escapeHtml;
-export { escapeHtml, safeImgSrc };
+export { escapeHtml };
 
 /* ── Data helpers ─────────────────────────────────────────────────────────── */
 
