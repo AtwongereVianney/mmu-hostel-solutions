@@ -142,5 +142,3 @@ export async function saveData() {
     // Data is still saved locally, will sync when connection is restored
   }
 }
-  await secureSet(STORAGE_KEYS.bookings, bookings);
-}
