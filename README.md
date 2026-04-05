@@ -292,3 +292,5 @@ npm run dev
 Mountains of the Moon University — ICT Department
 Fort Portal City, Uganda
 Email: ict@mmu.ac.ug
+#   m m u - h o s t e l - s o l u t i o n s  
+ 
