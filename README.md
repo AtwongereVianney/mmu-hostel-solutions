@@ -19,7 +19,7 @@ mmu-hostel/
 │   ├── app.js                  ← Entry point: render engine + window.App
 │   ├── security.js             ← ALL security primitives (17 mechanisms)
 │   ├── state.js                ← Single source of truth for app state
-│   ├── storage.js              ← Encrypted localStorage persistence
+│   ├── storage.js              ← API + localStorage persistence
 │   ├── utils.js                ← Pure helper functions (no side effects)
 │   ├── data.js                 ← Seed data & app-wide constants
 │   │
@@ -81,6 +81,30 @@ mmu-hostel/
 15. Prototype Pollution — `Object.freeze(Object.prototype)`
 16. Secure Error Handler — Global catch; no stack traces to UI
 17. Double-Booking Guard — Atomic check-then-set before confirming
+
+---
+
+## 🗄️ Backend Setup (For Multi-User Synchronization)
+
+The frontend uses localStorage by default, but includes API integration for shared data across users.
+
+### Database Setup
+1. Create a MySQL database named `new_hostel`
+2. Import the schema: `new-hostel/sql/schema.sql`
+3. Update database credentials in `new-hostel/config/db.php`
+
+### API Deployment
+1. Upload the `new-hostel/` folder to a PHP server
+2. Run `new-hostel/setup.php` to create default data
+3. Update `js/storage.js` API_BASE_URL to point to your server
+
+### API Endpoints
+- `GET/POST /new-hostel/api.php/hostels` — Hostel management
+- `GET/POST /new-hostel/api.php/bookings` — Booking management
+
+### Default Credentials
+- Admin Email: `admin@mmu.edu`
+- Password: `admin123`
 
 ---
 
