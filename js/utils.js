@@ -25,8 +25,8 @@ export function formatPrice(n) {
 /** Return { t: total, b: booked, a: available } for a hostel */
 export function roomStats(hostel) {
   const t = hostel.rooms.length;
-  const b = hostel.rooms.filter(r => r.status === 'booked').length;
-  return { t, b, a: t - b };
+  const a = hostel.rooms.filter(r => r.status === 'available').length;
+  return { t, b: t - a, a };
 }
 
 /** Aggregate stats across all hostels */
@@ -95,7 +95,9 @@ export function bookingCardHtml(booking) {
         <div class="font-bold text-g">${e(booking.studentName)}</div>
         <div class="text-xs text-gray-500">${e(booking.regNo)} · ${e(booking.course)}</div>
       </div>
-      <span class="badge-ok text-xs px-2 py-0.5 rounded-full font-semibold">✓ Confirmed</span>
+      <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'badge-ok'}">
+        ${booking.status === 'pending' ? '⏳ Pending Payment' : '✓ Confirmed'}
+      </span>
     </div>
     <div class="mt-2 grid grid-cols-2 gap-1 text-xs">
       <div><span class="text-gray-400">Hostel:</span> <b>${e(h.name)}</b></div>

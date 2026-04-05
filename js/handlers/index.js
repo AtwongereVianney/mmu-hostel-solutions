@@ -185,6 +185,7 @@ function _readRoomForm() {
     type:   document.getElementById('rT')?.value  ?? '',
     floor:  document.getElementById('rF')?.value  ?? '',
     price:  parseInt(document.getElementById('rP')?.value ?? '0', 10),
+    fee:    parseInt(document.getElementById('rCF')?.value ?? '0', 10),
     status: document.getElementById('rS')?.value  ?? 'available',
   };
 }
@@ -195,7 +196,8 @@ function _validateRoomForm(f) {
   if (!ROOM_TYPES.includes(f.type))        { _fieldErr('rErr','Invalid room type.'); return false; }
   if (!FLOOR_OPTIONS.includes(f.floor))    { _fieldErr('rErr','Invalid floor.'); return false; }
   if (!f.price||f.price<50000||f.price>2000000) { _fieldErr('rErr','Price must be UGX 50,000 – 2,000,000.'); return false; }
-  if (!['available','booked'].includes(f.status)) { _fieldErr('rErr','Invalid status.'); return false; }
+  if (f.fee < 0 || f.fee > f.price) { _fieldErr('rErr','Confirmation fee must be between 0 and the room price.'); return false; }
+  if (!['available','pending','booked'].includes(f.status)) { _fieldErr('rErr','Invalid status.'); return false; }
   return true;
 }
 
@@ -205,7 +207,7 @@ export async function doAddRoom() {
   const h = getHostel(state.modalData.hostelId);
   if (!h) { showToast('Hostel not found.', 'error'); return; }
   if (h.rooms.some(r => r.number === f.num)) { _fieldErr('rErr', `Room ${f.num} already exists in this hostel.`); return; }
-  h.rooms.push({ id: makeId(), number: f.num, type: f.type, floor: f.floor, price: f.price, status: 'available' });
+  h.rooms.push({ id: makeId(), number: f.num, type: f.type, floor: f.floor, price: f.price, confirmationFee: f.fee, status: 'available' });
   await saveData();
   await auditLog('ROOM_CREATED', `Admin added room ${f.num} to ${h.name}`);
   setState({ modal: null });
@@ -219,7 +221,7 @@ export async function doEditRoom() {
   const rIdx = h?.rooms.findIndex(x => x.id === state.modalData.roomId) ?? -1;
   if (!h || rIdx === -1) { showToast('Room not found.', 'error'); return; }
   if (h.rooms.some((r, i) => r.number === f.num && i !== rIdx)) { _fieldErr('rErr', `Room ${f.num} already exists.`); return; }
-  Object.assign(h.rooms[rIdx], { number: f.num, type: f.type, floor: f.floor, price: f.price, status: f.status });
+  Object.assign(h.rooms[rIdx], { number: f.num, type: f.type, floor: f.floor, price: f.price, confirmationFee: f.fee, status: f.status });
   if (f.status === 'available') { delete h.rooms[rIdx].bookedBy; delete h.rooms[rIdx].regNo; }
   await saveData();
   await auditLog('ROOM_UPDATED', `Admin updated room ${f.num} in ${h.name}`);
@@ -260,7 +262,7 @@ export async function releaseRoom(hostelId, roomId) {
 export function openBooking(hostelId, roomId) {
   const h = getHostel(hostelId);
   const r = h?.rooms.find(x => x.id === roomId);
-  if (!r || r.status === 'booked') { showToast('This room is no longer available.', 'warn'); setState({}); return; }
+  if (!r || r.status !== 'available') { showToast('This room is no longer available.', 'warn'); setState({}); return; }
   if (!canBook()) { showToast('Booking limit reached for this session.', 'error'); return; }
   setState({ modal: 'booking', selH: hostelId, selR: roomId, bStep: 1, bData: {} });
 }
@@ -316,7 +318,7 @@ export async function confirmBooking() {
   if (!h || rIdx === -1) { showToast('Room not found.', 'error'); return; }
 
   // Atomic double-booking check
-  if (h.rooms[rIdx].status === 'booked') {
+  if (h.rooms[rIdx].status !== 'available') {
     showToast('Room just booked by someone else. Please choose another.', 'warn');
     setState({ modal: null });
     return;
@@ -325,7 +327,7 @@ export async function confirmBooking() {
   const btn = document.getElementById('cbtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Processing…'; }
 
-  h.rooms[rIdx].status   = 'booked';
+  h.rooms[rIdx].status   = 'pending';
   h.rooms[rIdx].bookedBy = state.bData.studentName;
   h.rooms[rIdx].regNo    = state.bData.regNo;
 
@@ -338,6 +340,7 @@ export async function confirmBooking() {
     roomId:   room.id,
     ...state.bData,
     date:     today(),
+    status:   'pending',
   };
   bookings.push(booking);
   countBooking();
@@ -354,6 +357,23 @@ export async function confirmBooking() {
     bStep:      1,
     bData:      {},
   });
+}
+
+export async function confirmRoomPayment(hostelId, roomId) {
+  const h = getHostel(hostelId);
+  const r = h?.rooms.find(x => x.id === roomId);
+  if (!h || !r) return;
+
+  r.status = 'booked';
+  
+  // Find associated pending booking
+  const b = bookings.find(x => x.hostelId === hostelId && x.roomId === roomId && x.status === 'pending');
+  if (b) b.status = 'confirmed';
+
+  await saveData();
+  await auditLog('PAYMENT_CONFIRMED', `Admin confirmed payment for room ${r.number} in ${h.name}`);
+  setState({});
+  showToast(`Payment confirmed for Room ${r.number}.`);
 }
 
 /* Student booking lookup */

@@ -299,12 +299,18 @@ function modalRoomForm(isEdit) {
         <input id="rP" type="number" min="50000" max="2000000" class="inp"
                value="${r?.price ?? ''}" placeholder="e.g. 450000"/>
       </div>
+      <div>
+        <label class="lbl">Confirmation Fee (UGX) *</label>
+        <input id="rCF" type="number" min="0" max="2000000" class="inp"
+               value="${r?.confirmationFee ?? '50000'}" placeholder="e.g. 50000"/>
+      </div>
     </div>
     ${isEdit ? `
     <div>
       <label class="lbl">Status</label>
       <select id="rS" class="inp">
         <option value="available"${r?.status === 'available' ? ' selected' : ''}>Available</option>
+        <option value="pending"  ${r?.status === 'pending'   ? ' selected' : ''}>Pending</option>
         <option value="booked"   ${r?.status === 'booked'    ? ' selected' : ''}>Booked</option>
       </select>
     </div>` : ''}
@@ -458,7 +464,7 @@ function modalBooking() {
         </div>
       </div>
       <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-700 mb-4">
-        ⚠️ By confirming you agree to MMU hostel T&amp;Cs. Payment due at the Bursary within 48 hours.
+        ⚠️ To secure this room, a confirmation fee of <b>${formatPrice(room.confirmationFee || 0)}</b> must be paid at the Bursary within 48 hours. By confirming, you agree to MMU hostel T&amp;Cs.
       </div>
       <div id="s3e" class="err-txt hidden bg-red-50 p-2 rounded mb-3"></div>
       <div class="flex gap-3">

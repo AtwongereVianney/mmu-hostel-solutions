@@ -17,7 +17,7 @@ import { renderModal } from './modals/index.js';
 import {
   doLogin, doLogout,
   doAddHostel, doEditHostel, doDelHostel,
-  doAddRoom, doEditRoom, doDelRoom, releaseRoom,
+  doAddRoom, doEditRoom, doDelRoom, releaseRoom, confirmRoomPayment,
   openBooking, bStep1, bStep2, confirmBooking, lookupBooking,
   handleImgUpload, handleDrop, clearImg, previewMap, liveVal,
 } from './handlers/index.js';
@@ -68,7 +68,7 @@ window.App = Object.freeze({
   },
   doLogin, logout: doLogout,
   doAddHostel, doEditHostel, doDelHostel,
-  doAddRoom, doEditRoom, doDelRoom, releaseRoom,
+  doAddRoom, doEditRoom, doDelRoom, releaseRoom, confirmRoomPayment,
   openBooking, bStep1, bStep2, confirmBooking, lookupBooking,
   handleImgUpload, handleDrop, clearImg, previewMap, liveVal,
 });

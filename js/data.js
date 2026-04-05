@@ -62,11 +62,11 @@ export const SEED_HOSTELS = [
     },
     amenities: ['Wi-Fi', 'Security', 'Water', 'Electricity', 'Laundry'],
     rooms: [
-      { id: 101, number: 'R101', type: 'Single', price: 450000, status: 'available', floor: '1st' },
-      { id: 102, number: 'R102', type: 'Double', price: 300000, status: 'available', floor: '1st' },
-      { id: 103, number: 'R103', type: 'Single', price: 450000, status: 'booked',    floor: '1st', bookedBy: 'John Doe',    regNo: '2026/U/MMU/CCS/0000001' },
-      { id: 104, number: 'R201', type: 'Triple', price: 220000, status: 'available', floor: '2nd' },
-      { id: 105, number: 'R202', type: 'Double', price: 300000, status: 'booked',    floor: '2nd', bookedBy: 'Mary Tendo',  regNo: '2026/U/MMU/BIT/0000047' },
+      { id: 101, number: 'R101', type: 'Single', price: 450000, confirmationFee: 50000, status: 'available', floor: '1st' },
+      { id: 102, number: 'R102', type: 'Double', price: 300000, confirmationFee: 50000, status: 'available', floor: '1st' },
+      { id: 103, number: 'R103', type: 'Single', price: 450000, confirmationFee: 50000, status: 'pending',   floor: '1st', bookedBy: 'John Doe',    regNo: '2026/U/MMU/CCS/0000001' },
+      { id: 104, number: 'R201', type: 'Triple', price: 220000, confirmationFee: 50000, status: 'available', floor: '2nd' },
+      { id: 105, number: 'R202', type: 'Double', price: 300000, confirmationFee: 50000, status: 'booked',    floor: '2nd', bookedBy: 'Mary Tendo',  regNo: '2026/U/MMU/BIT/0000047' },
     ],
   },
   {
@@ -85,9 +85,9 @@ export const SEED_HOSTELS = [
     },
     amenities: ['Wi-Fi', 'Security', 'Water', 'Electricity', 'Study Room'],
     rooms: [
-      { id: 201, number: 'S101', type: 'Single', price: 500000, status: 'available', floor: '1st' },
-      { id: 202, number: 'S102', type: 'Double', price: 320000, status: 'available', floor: '1st' },
-      { id: 203, number: 'S103', type: 'Single', price: 500000, status: 'booked',    floor: '1st', bookedBy: 'Grace Asiimwe', regNo: '2026/U/MMU/ENG/0000112' },
+      { id: 201, number: 'S101', type: 'Single', price: 500000, confirmationFee: 100000, status: 'available', floor: '1st' },
+      { id: 202, number: 'S102', type: 'Double', price: 320000, confirmationFee: 100000, status: 'available', floor: '1st' },
+      { id: 203, number: 'S103', type: 'Single', price: 500000, confirmationFee: 100000, status: 'booked',    floor: '1st', bookedBy: 'Grace Asiimwe', regNo: '2026/U/MMU/ENG/0000112' },
     ],
   },
   {
@@ -106,9 +106,9 @@ export const SEED_HOSTELS = [
     },
     amenities: ['Security', 'Water', 'Electricity', 'Parking', 'Kitchen'],
     rooms: [
-      { id: 301, number: 'T101', type: 'Triple', price: 200000, status: 'available', floor: '1st' },
-      { id: 302, number: 'T102', type: 'Double', price: 270000, status: 'available', floor: '1st' },
-      { id: 303, number: 'T103', type: 'Triple', price: 200000, status: 'booked',    floor: '1st', bookedBy: 'Peter Mugisha', regNo: '2026/U/MMU/BBA/0000089' },
+      { id: 301, number: 'T101', type: 'Triple', price: 200000, confirmationFee: 40000, status: 'available', floor: '1st' },
+      { id: 302, number: 'T102', type: 'Double', price: 270000, confirmationFee: 40000, status: 'available', floor: '1st' },
+      { id: 303, number: 'T103', type: 'Triple', price: 200000, confirmationFee: 40000, status: 'pending',   floor: '1st', bookedBy: 'Peter Mugisha', regNo: '2026/U/MMU/BBA/0000089' },
     ],
   },
 ];

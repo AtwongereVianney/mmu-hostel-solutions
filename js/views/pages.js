@@ -236,14 +236,17 @@ export function renderAdmin() {
                 <td>${e(r.type)}</td>
                 <td>${e(r.floor)}</td>
                 <td class="font-semibold text-gold">${formatPrice(r.price)}</td>
-                <td><span class="text-xs px-2 py-0.5 rounded-full font-semibold ${r.status==='available'?'badge-ok':'badge-err'}">${r.status}</span></td>
+                <td><span class="text-xs px-2 py-0.5 rounded-full font-semibold ${r.status==='available'?'badge-ok':r.status==='pending'?'bg-yellow-100 text-yellow-800':'badge-err'}">${r.status}</span></td>
                 <td class="text-xs text-gray-500">${e(r.bookedBy||'—')}</td>
                 <td>
                   <div class="action-row">
                     <button onclick="App.requireAdmin() && App.openModal('editRoom', { hostelId:${h.id}, roomId:${r.id} })" class="text-xs text-g font-semibold hover:underline">✏️ Edit</button>
-                    ${r.status === 'booked'
+                    ${r.status === 'booked' || r.status === 'pending'
                       ? `<button onclick="App.requireAdmin() && App.releaseRoom(${h.id},${r.id})" class="text-xs text-blue-600 font-semibold hover:underline">↩ Release</button>`
                       : `<button onclick="App.requireAdmin() && App.openModal('delRoomConf', { hostelId:${h.id}, roomId:${r.id} })" class="text-xs text-red-500 font-semibold hover:underline">🗑 Del</button>`}
+                    ${r.status === 'pending'
+                      ? `<button onclick="App.requireAdmin() && App.confirmRoomPayment(${h.id},${r.id})" class="text-xs text-green-600 font-semibold hover:underline ml-2">✅ Confirm Pay</button>`
+                      : ''}
                   </div>
                 </td>
               </tr>`).join('')}
