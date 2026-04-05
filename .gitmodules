@@ -1,0 +1,3 @@
+[submodule "new-hostel"]
+	path = new-hostel
+	url = https://github.com/AtwongereVianney/new-hostel.git
