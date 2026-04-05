@@ -464,12 +464,12 @@ function modalBooking() {
         </div>
       </div>
       <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-700 mb-4">
-        ⚠️ To secure this room, a confirmation fee of <b>${formatPrice(room.confirmationFee || 0)}</b> must be paid at the Bursary within 48 hours. By confirming, you agree to MMU hostel T&amp;Cs.
+        ⚠️ To secure this room, a confirmation fee of <b>${formatPrice(room.confirmationFee || 0)}</b> will be charged to your mobile number via Flutterwave. Please have your phone ready. By confirming, you agree to MMU hostel T&amp;Cs.
       </div>
       <div id="s3e" class="err-txt hidden bg-red-50 p-2 rounded mb-3"></div>
       <div class="flex gap-3">
         <button onclick="App.setState({ bStep: 2 })" class="btn-out flex-1">← Back</button>
-        <button onclick="App.confirmBooking()" id="cbtn" class="btn-gold flex-1">✓ Confirm Booking</button>
+        <button onclick="App.confirmBooking()" id="cbtn" class="btn-gold flex-1">💳 Pay UGX ${room.confirmationFee || room.price}</button>
       </div>
     </div>` : ''}
   </div>`;
@@ -486,8 +486,8 @@ function modalSuccess() {
     <p class="text-gray-500 text-sm mb-4">${e(state.successMsg)}</p>
     <div class="bg-green-50 rounded-xl p-4 text-sm text-left mb-5 space-y-1">
       <div class="font-bold text-g mb-1">Next Steps:</div>
-      <div>1. Visit the MMU Bursary within 48 hours to complete payment.</div>
-      <div>2. Present your booking reference and student ID.</div>
+      <div>1. Your booking is 100% confirmed via digital payment.</div>
+      <div>2. Present your booking reference and student ID upon arrival.</div>
       <div>3. Collect your room key from the Hostel Warden.</div>
     </div>
     <div class="flex gap-3">

@@ -327,6 +327,7 @@ export async function confirmBooking() {
   const btn = document.getElementById('cbtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Processing…'; }
 
+  // Temporarily mark as pending to prevent double-booking while paying
   h.rooms[rIdx].status   = 'pending';
   h.rooms[rIdx].bookedBy = state.bData.studentName;
   h.rooms[rIdx].regNo    = state.bData.regNo;
@@ -334,8 +335,10 @@ export async function confirmBooking() {
   const room = h.rooms[rIdx];
   const randArr = new Uint32Array(1);
   crypto.getRandomValues(randArr);
+  const bookingId = 'B' + randArr[0].toString(36).toUpperCase();
+  
   const booking = {
-    id:       'B' + randArr[0].toString(36).toUpperCase(),
+    id:       bookingId,
     hostelId: h.id,
     roomId:   room.id,
     ...state.bData,
@@ -343,19 +346,64 @@ export async function confirmBooking() {
     status:   'pending',
   };
   bookings.push(booking);
-  countBooking();
-
+  
+  // Persist the lock
   await saveData();
-  await auditLog('BOOKING_CREATED',
-    `Room ${room.number} in ${h.name} booked by ${booking.studentName} (${booking.regNo})`,
-    { ref: booking.id }
-  );
 
-  setState({
-    modal:      'success',
-    successMsg: `Room ${room.number} in ${h.name} booked for ${state.bData.studentName}. Ref: #${booking.id}`,
-    bStep:      1,
-    bData:      {},
+  const amountToCharge = room.confirmationFee || room.price;
+
+  // Initialize live Flutterwave checkout
+  window.FlutterwaveCheckout({
+    public_key: 'FLWPUBK_TEST-SANDBOXDEMOKEY-X', // Swap with real key
+    tx_ref: bookingId,
+    amount: amountToCharge,
+    currency: 'UGX',
+    payment_options: 'mobilemoneyuganda, card',
+    customer: {
+      email: state.bData.email || 'student@mmu.ac.ug',
+      phone_number: state.bData.phone,
+      name: state.bData.studentName,
+    },
+    customizations: {
+      title: 'MMU Hostel Booking',
+      description: `Confirmation for Room ${room.number}`,
+      logo: 'https://mmu.ac.ug/wp-content/uploads/2021/04/mmu-logo.png'
+    },
+    callback: async function(paymentData) {
+      if (paymentData.status === 'successful') {
+        countBooking();
+        h.rooms[rIdx].status = 'booked';
+        const b = bookings.find(x => x.id === bookingId);
+        if (b) b.status = 'confirmed';
+
+        await saveData();
+        await auditLog('BOOKING_CREATED',
+          `Room ${room.number} in ${h.name} booked by ${booking.studentName} (${booking.regNo}) via Flutterwave`,
+          { ref: bookingId, txRef: paymentData.transaction_id }
+        );
+
+        setState({
+          modal:      'success',
+          successMsg: `Payment successful! Room ${room.number} in ${h.name} is confirmed for ${state.bData.studentName}. Ref: #${bookingId}`,
+          bStep:      1,
+          bData:      {},
+        });
+      }
+    },
+    onclose: async function(incomplete) {
+      // If modal is closed without success, release the pending lock
+      if (h.rooms[rIdx].status === 'pending') {
+        h.rooms[rIdx].status = 'available';
+        delete h.rooms[rIdx].bookedBy;
+        delete h.rooms[rIdx].regNo;
+        const bIdx = bookings.findIndex(x => x.id === bookingId);
+        if (bIdx !== -1) bookings.splice(bIdx, 1);
+        await saveData();
+      }
+      const reBtn = document.getElementById('cbtn');
+      if (reBtn) { reBtn.disabled = false; reBtn.textContent = `💳 Pay UGX ${amountToCharge}`; }
+      if (incomplete) showToast('Payment window closed. Room reservation cancelled.', 'warn');
+    }
   });
 }
 
