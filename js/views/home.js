@@ -19,7 +19,7 @@ import { PRICE_RANGE }         from '../data.js';
 
 export function renderHome() {
   const s = allStats();
-  const { fSearch, fGender, fPriceMin, fPriceMax } = state;
+  const { fSearch, fGender } = state;
 
   return `
   <!-- Hero Banner -->
@@ -60,7 +60,7 @@ export function renderHome() {
 
   <!-- Smart Search Bar (Booking.com style) -->
   <div class="bg-white rounded-2xl shadow-card p-5 mb-8">
-    <div class="text-g font-bold text-sm mb-3">🔍 Smart Search</div>
+    <div class="text-g font-bold text-sm mb-3">🔍 Search Hostels</div>
     <div class="grid md:grid-cols-4 gap-3 items-end">
       <div class="md:col-span-2">
         <label class="lbl">Search Hostel</label>

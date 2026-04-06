@@ -99,6 +99,7 @@ function _readHostelForm() {
     lat:    (document.getElementById('hLat')?.value ?? '').trim(),
     lng:    (document.getElementById('hLng')?.value ?? '').trim(),
     rating: parseFloat(document.getElementById('hRating')?.value ?? '0') || 0,
+    mgr:    sanitize(document.getElementById('hMgr')?.value ?? '').trim(),
   };
 }
 
@@ -111,6 +112,7 @@ function _validateHostelForm(f) {
   if (!f.lat || !validate('lat', f.lat))   { _fieldErr('hErr','Valid latitude required (e.g. 0.6591).'); return false; }
   if (!f.lng || !validate('lng', f.lng))   { _fieldErr('hErr','Valid longitude required (e.g. 30.2752).'); return false; }
   if (f.rating < 0 || f.rating > 5)       { _fieldErr('hErr','Rating must be between 0 and 5.'); return false; }
+  if (f.mgr && !validate('phone', f.mgr)) { _fieldErr('hErr','Invalid manager phone number.'); return false; }
   return true;
 }
 
@@ -127,6 +129,7 @@ export async function doAddHostel() {
     distance: f.dist, description: f.desc || 'No description provided.',
     image: state.pendingImg ?? null, emoji: '🏠', color: '#1a5c38',
     rating: f.rating || null,
+    managerPhone: f.mgr || null,
     location: { address: f.addr, lat: f.lat, lng: f.lng },
     amenities, rooms: [],
   });
@@ -149,6 +152,7 @@ export async function doEditHostel() {
     description: f.desc || h.description,
     image: state.pendingImg !== null ? state.pendingImg : h.image,
     rating: f.rating || h.rating,
+    managerPhone: f.mgr || h.managerPhone,
     location: { address: f.addr, lat: f.lat, lng: f.lng },
     amenities: f.amen
       ? f.amen.split(',').map(a => sanitize(a.trim(), 30)).filter(Boolean)

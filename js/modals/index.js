@@ -157,6 +157,11 @@ function modalHostelForm(isEdit) {
         <input id="hRating" type="number" min="0" max="5" step="0.1" class="inp"
                value="${h?.rating ?? ''}" placeholder="e.g. 4.2"/>
       </div>
+      <div>
+        <label class="lbl">Manager's WhatsApp *</label>
+        <input id="hMgr" type="tel" maxlength="15" placeholder="07XXXXXXXX" class="inp"
+               value="${e(h?.managerPhone ?? '')}"/>
+      </div>
     </div>
     <div>
       <label class="lbl">Description</label>
@@ -243,9 +248,13 @@ function modalViewHostel() {
             title="Hostel location map"></iframe>
     <a href="${e(mapLinkUrl(h.location.lat, h.location.lng))}" target="_blank" rel="noopener noreferrer"
        class="text-sm text-g font-semibold hover:underline">🗺 Open Full Map ↗</a>` : ''}
-    <div class="flex gap-3 pt-2">
+    <div class="flex flex-wrap gap-2 pt-2">
       <button onclick="App.closeModal()" class="btn-out flex-1">Close</button>
-      <button onclick="App.openModal('editHostel', { hostelId: ${h.id} })" class="btn-g flex-1">✏️ Edit This Hostel</button>
+      <a href="https://wa.me/${(h.managerPhone || '').replace(/\D/g,'').replace(/^0/,'256')}" target="_blank" 
+         class="btn-g flex-1 flex items-center justify-center gap-2">
+        <span>💬 Contact Manager</span>
+      </a>
+      <button onclick="App.openModal('editHostel', { hostelId: ${h.id} })" class="btn-out flex-1">✏️ Edit</button>
     </div>
   </div>`;
 }
@@ -536,9 +545,14 @@ function modalSuccess() {
       <div>2. Present your booking reference and student ID upon arrival.</div>
       <div>3. Collect your room key from the Hostel Warden.</div>
     </div>
-    <div class="flex gap-3 flex-wrap">
+    <div class="flex gap-2 flex-wrap">
       <button onclick="App.go('myBookings'); App.closeModal();" class="btn-g flex-1">View My Booking</button>
-      ${bookingId ? `<button onclick="App.openModal('bookingSlip', { bookingId: '${bookingId}' })" class="btn-out flex-1">📄 Download Slip</button>` : ''}
+      ${bookingId ? `<button onclick="App.openModal('bookingSlip', { bookingId: '${bookingId}' })" class="btn-out flex-1">📄 Slip</button>` : ''}
+      ${(getHostel(state.selH)?.managerPhone) ? `
+        <a href="https://wa.me/${getHostel(state.selH).managerPhone.replace(/\D/g,'').replace(/^0/,'256')}?text=${encodeURIComponent(`Hello! I just booked a room in ${getHostel(state.selH).name}. My Booking Ref is #${bookingId}.`)}" 
+           target="_blank" class="btn-gold flex-1 flex items-center justify-center gap-2">
+          <span>💬 Chat with Manager</span>
+        </a>` : ''}
     </div>
     <button onclick="App.go('hostels'); App.closeModal();" class="text-sm text-gray-400 hover:underline mt-3 block mx-auto">Back to Hostels</button>
   </div>`;
