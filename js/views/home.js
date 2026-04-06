@@ -78,26 +78,7 @@ export function renderHome() {
         <button onclick="App.go('hostels')" class="btn-g w-full">Search →</button>
       </div>
     </div>
-    <!-- Price range slider -->
-    <div class="mt-4 pt-4 border-t border-gray-100">
-      <div class="flex items-center justify-between mb-1">
-        <label class="lbl">Max Price per Semester</label>
-        <span class="text-xs font-bold text-gold" id="priceDisplay">
-          UGX ${Number(fPriceMax).toLocaleString()}
-        </span>
-      </div>
-      <input type="range" class="range-inp"
-             min="${PRICE_RANGE.min}" max="${PRICE_RANGE.max}" step="50000"
-             value="${fPriceMax}"
-             oninput="
-               App.setState({ fPriceMax: +this.value });
-               document.getElementById('priceDisplay').textContent = 'UGX ' + (+this.value).toLocaleString();
-             "/>
-      <div class="flex justify-between text-xs text-gray-400 mt-1">
-        <span>UGX ${Number(PRICE_RANGE.min).toLocaleString()}</span>
-        <span>UGX ${Number(PRICE_RANGE.max).toLocaleString()}</span>
-      </div>
-    </div>
+
   </div>
 
   <!-- Featured Hostels -->
