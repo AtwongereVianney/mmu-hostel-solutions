@@ -433,6 +433,14 @@ function modalBooking() {
         <div class="text-xs text-gray-400 mt-1">Uganda format: +256XXXXXXXXX or 07XXXXXXXX</div>
       </div>
       <div>
+        <label class="lbl">Mobile Network *</label>
+        <select id="fNet" class="inp">
+          <option value="">Select Network</option>
+          <option value="MTN"${bd.network === 'MTN' ? ' selected' : ''}>MTN Uganda</option>
+          <option value="AIRTEL"${bd.network === 'AIRTEL' ? ' selected' : ''}>Airtel Uganda</option>
+        </select>
+      </div>
+      <div>
         <label class="lbl">Email (optional)</label>
         <input id="fE" type="email" maxlength="100" class="inp" placeholder="student@mmu.ac.ug"
                value="${e(bd.email ?? '')}" oninput="App.liveVal(this,'email')"/>
@@ -466,7 +474,7 @@ function modalBooking() {
           <span class="text-gray-500">Reg No:</span>   <b>${e(bd.regNo)}</b>
           <span class="text-gray-500">Course:</span>   <b>${e(bd.course)}</b>
           <span class="text-gray-500">Year:</span>     <b>${e(bd.year)}</b>
-          <span class="text-gray-500">Phone:</span>    <b>${e(bd.phone)}</b>
+          <span class="text-gray-500">Phone:</span>    <b>${e(bd.phone)} (${e(bd.network)})</b>
           <span class="text-gray-500">Semester:</span> <b>${e(bd.semester)}</b>
         </div>
         <div class="border-t border-green-200 pt-2 mt-2 grid grid-cols-2 gap-1 text-xs">
@@ -496,7 +504,7 @@ function modalBooking() {
       </div>
 
       <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-700 mb-4">
-        ⚠️ A confirmation fee of <b>${formatPrice(room.confirmationFee || 0)}</b> will be charged via Flutterwave (mobile money or card). By confirming, you agree to MMU hostel T&amp;Cs.
+        ⚠️ A confirmation fee of <b>${formatPrice(room.confirmationFee || 0)}</b> will be pushed directly to your phone via Mobile Money. Please have your phone ready to enter your PIN. By confirming, you agree to MMU hostel T&amp;Cs.
       </div>
       <div id="s3e" class="err-txt hidden bg-red-50 p-2 rounded mb-3"></div>
       <div class="flex gap-3">

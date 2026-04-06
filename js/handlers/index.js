@@ -286,20 +286,22 @@ export function bStep1() {
 }
 
 export function bStep2() {
-  const phone  = sanitize(document.getElementById('fPh')?.value ?? '');
-  const email  = sanitize(document.getElementById('fE')?.value  ?? '');
-  const course = sanitize(document.getElementById('fC')?.value  ?? '');
-  const sem    = document.getElementById('fSm')?.value ?? '';
+  const phone   = sanitize(document.getElementById('fPh')?.value ?? '');
+  const network = document.getElementById('fNet')?.value ?? '';
+  const email   = sanitize(document.getElementById('fE')?.value  ?? '');
+  const course  = sanitize(document.getElementById('fC')?.value  ?? '');
+  const sem     = document.getElementById('fSm')?.value ?? '';
 
   if (!phone)                             { _fieldErr('s2e','Phone number is required.'); return; }
   if (!validate('phone', phone))          { _fieldErr('s2e','Invalid phone. Use +256XXXXXXXXX or 07XXXXXXXX.'); return; }
+  if (!network)                           { _fieldErr('s2e','Please select a Mobile Network (MTN or Airtel).'); return; }
   if (email && !validate('email', email)) { _fieldErr('s2e','Invalid email format.'); return; }
   if (!course)                            { _fieldErr('s2e','Programme / course is required.'); return; }
   if (!validate('course', course))        { _fieldErr('s2e','Course contains invalid characters.'); return; }
   if (!sem)                               { _fieldErr('s2e','Please select your semester.'); return; }
 
   document.getElementById('s2e')?.classList.add('hidden');
-  Object.assign(state.bData, { phone, email, course, semester: sem });
+  Object.assign(state.bData, { phone, network, email, course, semester: sem });
   setState({ bStep: 3 });
 }
 
@@ -354,61 +356,97 @@ export async function confirmBooking() {
 
   const amountToCharge = room.confirmationFee || room.price;
 
-  // Initialize live Flutterwave checkout
-  window.FlutterwaveCheckout({
-    public_key: 'FLWPUBK_TEST-SANDBOXDEMOKEY-X', // Swap with real key
-    tx_ref: bookingId,
+  const _revertLock = async () => {
+    if (h.rooms[rIdx].status === 'pending') {
+      h.rooms[rIdx].status = 'available';
+      delete h.rooms[rIdx].bookedBy;
+      delete h.rooms[rIdx].regNo;
+      const bIdx = bookings.findIndex(x => x.id === bookingId);
+      if (bIdx !== -1) bookings.splice(bIdx, 1);
+      window.__mmuBookings__ = bookings;
+      await saveData();
+    }
+  };
+
+  const _onSuccess = async (txRef) => {
+    countBooking();
+    h.rooms[rIdx].status = 'booked';
+    const b = bookings.find(x => x.id === bookingId);
+    if (b) b.status = 'confirmed';
+
+    window.__mmuBookings__ = bookings;
+    await saveData();
+    await auditLog('BOOKING_CREATED',
+      `Room ${room.number} in ${h.name} booked by ${booking.studentName} (${booking.regNo}) via Direct Charge API`,
+      { ref: bookingId, txRef }
+    );
+
+    setState({
+      modal:      'success',
+      successMsg: `Payment successful! Room ${room.number} in ${h.name} is confirmed for ${state.bData.studentName}. Ref: #${bookingId}`,
+      bStep:      1,
+      bData:      {},
+    });
+  };
+
+  const payload = {
     amount: amountToCharge,
-    currency: 'UGX',
-    payment_options: 'mobilemoneyuganda, card',
-    customer: {
-      email: state.bData.email || 'student@mmu.ac.ug',
-      phone_number: state.bData.phone,
-      name: state.bData.studentName,
-    },
-    customizations: {
-      title: 'MMU Hostel Booking',
-      description: `Confirmation fee for Room ${room.number} — ${h.name}`,
-      logo: 'https://mmu.ac.ug/wp-content/uploads/2021/04/mmu-logo.png',
-    },
-    callback: async function(paymentData) {
-      if (paymentData.status === 'successful') {
-        countBooking();
-        h.rooms[rIdx].status = 'booked';
-        const b = bookings.find(x => x.id === bookingId);
-        if (b) b.status = 'confirmed';
+    phone: state.bData.phone,
+    email: state.bData.email || 'student@mmu.ac.ug',
+    tx_ref: bookingId,
+    fullname: state.bData.studentName,
+    network: state.bData.network // MTN or AIRTEL
+  };
 
-        window.__mmuBookings__ = bookings;
-        await saveData();
-        await auditLog('BOOKING_CREATED',
-          `Room ${room.number} in ${h.name} booked by ${booking.studentName} (${booking.regNo}) via Flutterwave`,
-          { ref: bookingId, txRef: paymentData.transaction_id }
-        );
+  try {
+    const res = await fetch('./new-hostel/api.php/pay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    const json = await res.json();
+    
+    if (json.status === 'success' || json.status === 'pending') {
+      if (btn) btn.textContent = 'Pushing PIN prompt to phone...';
+      showToast('A payment prompt has been sent to your phone. Please enter your Mobile Money PIN.', 'success');
+      
+      // Polling loop
+      let ticks = 0;
+      const poll = setInterval(async () => {
+        if (++ticks > 24) { // Timeout after 2 mins (5s * 24)
+          clearInterval(poll);
+          await _revertLock();
+          if (btn) { btn.disabled = false; btn.textContent = `💳 Pay ${formatPrice(amountToCharge)} Now`; }
+          showToast('Payment timed out. Please try again.', 'error');
+          return;
+        }
 
-        setState({
-          modal:      'success',
-          successMsg: `Payment successful! Room ${room.number} in ${h.name} is confirmed for ${state.bData.studentName}. Ref: #${bookingId}`,
-          bStep:      1,
-          bData:      {},
-        });
-      }
-    },
-    onclose: async function(incomplete) {
-      // If modal is closed without success, release the pending lock
-      if (h.rooms[rIdx].status === 'pending') {
-        h.rooms[rIdx].status = 'available';
-        delete h.rooms[rIdx].bookedBy;
-        delete h.rooms[rIdx].regNo;
-        const bIdx = bookings.findIndex(x => x.id === bookingId);
-        if (bIdx !== -1) bookings.splice(bIdx, 1);
-        window.__mmuBookings__ = bookings;
-        await saveData();
-      }
-      const reBtn = document.getElementById('cbtn');
-      if (reBtn) { reBtn.disabled = false; reBtn.textContent = `💳 Pay ${formatPrice(amountToCharge)} Now`; }
-      if (incomplete) showToast('Payment window closed. Room reservation cancelled.', 'warn');
-    },
-  });
+        try {
+          const vRes = await fetch(`./new-hostel/api.php/verify-payment?tx_ref=${bookingId}`);
+          const vJson = await vRes.json();
+          if (vJson.status === 'successful') {
+            clearInterval(poll);
+            await _onSuccess(vJson.transaction_id || '');
+          } else if (vJson.status === 'failed') {
+            clearInterval(poll);
+            await _revertLock();
+            if (btn) { btn.disabled = false; btn.textContent = `💳 Pay ${formatPrice(amountToCharge)} Now`; }
+            showToast('Payment failed or was cancelled by user.', 'error');
+          }
+        } catch(e) {} // ignore interim fetch errors
+      }, 5000);
+      
+    } else {
+      await _revertLock();
+      if (btn) { btn.disabled = false; btn.textContent = `💳 Pay ${formatPrice(amountToCharge)} Now`; }
+      showToast(json.message || 'Failed to initiate payment.', 'error');
+    }
+  } catch(e) {
+    await _revertLock();
+    if (btn) { btn.disabled = false; btn.textContent = `💳 Pay ${formatPrice(amountToCharge)} Now`; }
+    showToast('Network error while initiating payment.', 'error');
+  }
 }
 
 export async function confirmRoomPayment(hostelId, roomId) {
