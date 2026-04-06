@@ -100,6 +100,17 @@ export async function loadData() {
     bookings = await secureGet(STORAGE_KEYS.bookings, []);
   }
 
+  // Data Migration: Ensure existing hostels get the new managerPhone from seeds if missing
+  if (Array.isArray(hostels)) {
+    hostels = hostels.map(h => {
+      const seed = SEED_HOSTELS.find(s => s.id === h.id);
+      if (seed && !h.managerPhone) {
+        h.managerPhone = seed.managerPhone;
+      }
+      return h;
+    });
+  }
+
   setHostels(Array.isArray(hostels) ? hostels : SEED_HOSTELS);
   setBookings(Array.isArray(bookings) ? bookings : []);
 }
