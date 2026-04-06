@@ -12,7 +12,7 @@ import { hashPassword } from './security.js';
 
 /* ── App-wide constants ───────────────────────────────────────────────────── */
 export const APP_NAME    = 'MMU Hostel Booking System';
-export const APP_VERSION = '3.0.0';
+export const APP_VERSION = '3.1.0';
 
 /** Promise resolves to the SHA-256 hash of the admin password */
 export const ADMIN_PASS_HASH = hashPassword('admin123');
@@ -44,6 +44,9 @@ export const STUDY_YEARS = Object.freeze([
   'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Postgraduate',
 ]);
 
+/** Price range for the filter slider (UGX) */
+export const PRICE_RANGE = Object.freeze({ min: 100000, max: 1000000 });
+
 /* ── Seed data (used only when localStorage is empty) ────────────────────── */
 export const SEED_HOSTELS = [
   {
@@ -55,6 +58,7 @@ export const SEED_HOSTELS = [
     image: null,
     emoji: '🏢',
     color: '#1a5c38',
+    rating: 4.5,
     location: {
       address: 'Along Kibundaire Road, Fort Portal City',
       lat: '0.6591',
@@ -78,6 +82,7 @@ export const SEED_HOSTELS = [
     image: null,
     emoji: '🏠',
     color: '#c9961a',
+    rating: 4.2,
     location: {
       address: 'Saaka Campus Road, Fort Portal City',
       lat: '0.6620',
@@ -99,6 +104,7 @@ export const SEED_HOSTELS = [
     image: null,
     emoji: '🏗️',
     color: '#2d7a4f',
+    rating: 3.8,
     location: {
       address: 'Fort Portal–Kasese Road, Fort Portal City',
       lat: '0.6560',

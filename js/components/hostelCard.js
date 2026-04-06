@@ -1,56 +1,77 @@
 /**
  * components/hostelCard.js
  * ═══════════════════════════════════════════════════════════════════════════
- * Separation of Concerns: renders a single hostel card HTML snippet.
- * Pure function – no state reads except what is passed in.
+ * Reusable hostel card component with:
+ *   - Star rating (Booking.com style)
+ *   - Availability urgency badge
+ *   - ❤️ Shortlist / Wishlist button
+ *   - Price-from display
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 'use strict';
 
-import { e, formatPrice, roomStats, hostelCoverHtml } from '../utils.js';
+import { state }                from '../state.js';
+import { e, formatPrice, roomStats, hostelCoverHtml, starRatingHtml, availabilityBadgeHtml } from '../utils.js';
 
-/**
- * @param {object} hostel – a hostel object from state
- * @returns {string}      – HTML string for the card
- */
-export function renderHostelCard(hostel) {
-  const s   = roomStats(hostel);
-  const pct = s.t > 0 ? Math.round((s.b / s.t) * 100) : 0;
-
-  const badgeCls = s.a === 0 ? 'badge-err' : s.a < 3 ? 'badge-warn' : 'badge-ok';
-  const label    = s.a === 0 ? 'Fully Booked' : `${s.a} Available`;
-  const minPrice = hostel.rooms.length
-    ? formatPrice(Math.min(...hostel.rooms.map(r => r.price)))
-    : 'N/A';
+export function renderHostelCard(h) {
+  const s        = roomStats(h);
+  const minPrice = h.rooms.length ? Math.min(...h.rooms.map(r => r.price)) : 0;
+  const isSaved  = state.shortlist.includes(h.id);
+  const rating   = h.rating ?? 0;
 
   return `
-  <div class="bg-white rounded-xl shadow-card overflow-hidden hostel-card shadow-hover"
-       onclick="App.go('hostelDetail', { selH: ${hostel.id}, fType: 'All' })">
-    ${hostelCoverHtml(hostel)}
+  <div class="bg-white rounded-2xl shadow-card shadow-hover overflow-hidden hostel-card"
+       onclick="App.go('hostelDetail', { selH: ${h.id}, fType: 'All' })">
+
+    <!-- Cover image / emoji fallback -->
+    <div style="position:relative">
+      ${hostelCoverHtml(h)}
+      <!-- Wishlist heart button (Booking.com style) -->
+      <button class="btn-heart${isSaved ? ' saved' : ''}"
+              style="position:absolute;top:.5rem;right:.5rem;background:rgba(255,255,255,.85);backdrop-filter:blur(4px);border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;"
+              onclick="event.stopPropagation(); App.toggleShortlist(${h.id})"
+              title="${isSaved ? 'Remove from shortlist' : 'Save to shortlist'}">
+        ${isSaved ? '❤️' : '🤍'}
+      </button>
+      <!-- Gender badge -->
+      <span class="text-xs px-2 py-0.5 rounded-full font-semibold"
+            style="position:absolute;top:.5rem;left:.5rem;background:rgba(255,255,255,.85);color:#1a5c38;backdrop-filter:blur(4px);">
+        ${h.gender}
+      </span>
+    </div>
+
+    <!-- Card body -->
     <div class="p-4">
-      <div class="flex items-start justify-between mb-1">
-        <h3 class="font-bold text-g">${e(hostel.name)}</h3>
-        <span class="text-xs px-2 py-0.5 rounded-full font-semibold ml-2 whitespace-nowrap ${badgeCls}">
-          ${e(label)}
-        </span>
+      <!-- Name + rating row -->
+      <div class="flex items-start justify-between gap-2 mb-1">
+        <div class="font-bold text-g text-base leading-tight">${e(h.name)}</div>
+        ${rating ? starRatingHtml(rating) : ''}
       </div>
-      <div class="text-xs text-gray-500 mb-1">📍 ${e(hostel.distance)}</div>
-      ${hostel.location?.address
-        ? `<div class="text-xs text-gray-400 mb-2">🗺 ${e(hostel.location.address.slice(0, 50))}</div>`
-        : ''}
-      <div class="text-xs text-gray-400 mb-3">
-        ${e(hostel.description.slice(0, 70))}${hostel.description.length > 70 ? '…' : ''}
+
+      <!-- Distance -->
+      <div class="text-xs text-gray-400 mb-2">📍 ${e(h.distance)}</div>
+
+      <!-- Availability urgency badge (Booking.com style) -->
+      <div class="mb-3">${availabilityBadgeHtml(s.a)}</div>
+
+      <!-- Amenity chips (first 3) -->
+      <div class="flex flex-wrap gap-1 mb-3">
+        ${h.amenities.slice(0, 3).map(a => `<span class="chip">✓ ${e(a)}</span>`).join('')}
+        ${h.amenities.length > 3 ? `<span class="chip text-gray-400">+${h.amenities.length - 3} more</span>` : ''}
       </div>
-      <div class="flex items-center gap-2 mb-3">
-        <div class="flex-1 bg-gray-100 rounded-full h-1.5">
-          <div class="prog h-1.5 rounded-full" style="width:${pct}%"></div>
-        </div>
-        <span class="text-xs text-gray-500">${pct}%</span>
-      </div>
+
+      <!-- Price from + CTA -->
       <div class="flex items-center justify-between">
-        <span class="text-xs text-gray-500">👫 ${e(hostel.gender)}</span>
-        <span class="text-xs font-bold text-gold">From ${minPrice}/sem</span>
+        ${minPrice
+          ? `<div>
+               <div class="text-xs text-gray-400">From</div>
+               <div class="font-bold text-gold">${formatPrice(minPrice)}<span class="text-gray-400 font-normal text-xs">/sem</span></div>
+             </div>`
+          : '<div class="text-xs text-gray-400">No rooms yet</div>'}
+        <button class="btn-g btn-sm" onclick="event.stopPropagation(); App.go('hostelDetail', { selH: ${h.id}, fType: 'All' })">
+          View Rooms
+        </button>
       </div>
     </div>
   </div>`;

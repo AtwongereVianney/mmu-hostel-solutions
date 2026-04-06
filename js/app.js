@@ -2,6 +2,10 @@
  * js/app.js – Application Entry Point & Render Engine
  * Wires all modules. Exposes window.App (all onclick= handlers).
  * Nothing imports app.js – this is the dependency leaf.
+ *
+ * v3.1 Booking.com upgrades:
+ *   - toggleShortlist, downloadBookingSlip, setRating added to App namespace
+ *   - loading state cleared after data loads (skeleton → real cards)
  */
 'use strict';
 
@@ -20,6 +24,7 @@ import {
   doAddRoom, doEditRoom, doDelRoom, releaseRoom, confirmRoomPayment,
   openBooking, bStep1, bStep2, confirmBooking, lookupBooking,
   handleImgUpload, handleDrop, clearImg, previewMap, liveVal,
+  toggleShortlist, downloadBookingSlip, setRating,
 } from './handlers/index.js';
 
 /* Render engine */
@@ -66,11 +71,26 @@ window.App = Object.freeze({
     }
     touchSession(); return true;
   },
+
+  /* ── Auth ────────────────────────────────────────────────────────────── */
   doLogin, logout: doLogout,
+
+  /* ── Hostel CRUD ─────────────────────────────────────────────────────── */
   doAddHostel, doEditHostel, doDelHostel,
+
+  /* ── Room CRUD ───────────────────────────────────────────────────────── */
   doAddRoom, doEditRoom, doDelRoom, releaseRoom, confirmRoomPayment,
+
+  /* ── Booking flow ────────────────────────────────────────────────────── */
   openBooking, bStep1, bStep2, confirmBooking, lookupBooking,
+
+  /* ── Image upload ────────────────────────────────────────────────────── */
   handleImgUpload, handleDrop, clearImg, previewMap, liveVal,
+
+  /* ── Booking.com features ────────────────────────────────────────────── */
+  toggleShortlist,       // ❤️ Wishlist / shortlist toggle
+  downloadBookingSlip,   // 📄 Print booking receipt
+  setRating,             // ⭐ Admin sets hostel star rating
 });
 
 window.Sec = Object.freeze({ sanitize });
@@ -78,9 +98,16 @@ window.Sec = Object.freeze({ sanitize });
 /* Init */
 (async function () {
   registerRenderer(render);
+
+  // Show skeleton loader immediately
+  setState({ loading: true });
+
   await loadData();
-  await auditLog('APP_START', 'MMU Hostel Booking System v3.0 started');
+  await auditLog('APP_START', 'MMU Hostel Booking System v3.1 started');
+
   document.addEventListener('click',    () => touchSession(), { passive: true });
   document.addEventListener('keypress', () => touchSession(), { passive: true });
-  render();
+
+  // Mark loading complete — skeleton cards replaced by real hostel cards
+  setState({ loading: false });
 })();

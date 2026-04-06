@@ -1,15 +1,10 @@
 /**
  * js/handlers/index.js  –  ALL Business Logic & Action Handlers
  * ═══════════════════════════════════════════════════════════════════════════
- * Separation of Concerns:
- *   • Auth (login / logout)
- *   • Hostel CRUD
- *   • Room CRUD + release
- *   • Booking flow (3-step + confirm)
- *   • Image upload / drop / clear / map preview
- *   • Booking lookup (student)
- *
- * No HTML rendering occurs here. Templates live in views/ and modals/.
+ * Booking.com upgrades added:
+ *   • toggleShortlist(hostelId)  — save/remove from wishlist
+ *   • downloadBookingSlip(id)    — open printable booking receipt
+ *   • setRating(hostelId, rating) — admin sets star rating
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -27,7 +22,7 @@ import {
   validateImageFile, safeImgSrc,
 } from '../security.js';
 import { ADMIN_PASS_HASH } from '../data.js';
-import { getHostel, makeId, today, escapeHtml, bookingCardHtml } from '../utils.js';
+import { getHostel, makeId, today, escapeHtml, bookingCardHtml, formatPrice } from '../utils.js';
 import { GENDER_OPTIONS, ROOM_TYPES, FLOOR_OPTIONS } from '../data.js';
 
 /* ── Private helper: show a field-level error ─────────────────────────── */
@@ -103,6 +98,7 @@ function _readHostelForm() {
     addr:   sanitize(document.getElementById('hAddr')?.value ?? '', 120),
     lat:    (document.getElementById('hLat')?.value ?? '').trim(),
     lng:    (document.getElementById('hLng')?.value ?? '').trim(),
+    rating: parseFloat(document.getElementById('hRating')?.value ?? '0') || 0,
   };
 }
 
@@ -114,6 +110,7 @@ function _validateHostelForm(f) {
   if (!f.addr)                             { _fieldErr('hErr','Full address is required.'); return false; }
   if (!f.lat || !validate('lat', f.lat))   { _fieldErr('hErr','Valid latitude required (e.g. 0.6591).'); return false; }
   if (!f.lng || !validate('lng', f.lng))   { _fieldErr('hErr','Valid longitude required (e.g. 30.2752).'); return false; }
+  if (f.rating < 0 || f.rating > 5)       { _fieldErr('hErr','Rating must be between 0 and 5.'); return false; }
   return true;
 }
 
@@ -129,6 +126,7 @@ export async function doAddHostel() {
     id: makeId(), name: f.name, gender: f.gender,
     distance: f.dist, description: f.desc || 'No description provided.',
     image: state.pendingImg ?? null, emoji: '🏠', color: '#1a5c38',
+    rating: f.rating || null,
     location: { address: f.addr, lat: f.lat, lng: f.lng },
     amenities, rooms: [],
   });
@@ -150,6 +148,7 @@ export async function doEditHostel() {
     name: f.name, gender: f.gender, distance: f.dist,
     description: f.desc || h.description,
     image: state.pendingImg !== null ? state.pendingImg : h.image,
+    rating: f.rating || h.rating,
     location: { address: f.addr, lat: f.lat, lng: f.lng },
     amenities: f.amen
       ? f.amen.split(',').map(a => sanitize(a.trim(), 30)).filter(Boolean)
@@ -336,7 +335,7 @@ export async function confirmBooking() {
   const randArr = new Uint32Array(1);
   crypto.getRandomValues(randArr);
   const bookingId = 'B' + randArr[0].toString(36).toUpperCase();
-  
+
   const booking = {
     id:       bookingId,
     hostelId: h.id,
@@ -346,7 +345,10 @@ export async function confirmBooking() {
     status:   'pending',
   };
   bookings.push(booking);
-  
+
+  // Expose bookings globally so slip modal can access them
+  window.__mmuBookings__ = bookings;
+
   // Persist the lock
   await saveData();
 
@@ -366,8 +368,8 @@ export async function confirmBooking() {
     },
     customizations: {
       title: 'MMU Hostel Booking',
-      description: `Confirmation for Room ${room.number}`,
-      logo: 'https://mmu.ac.ug/wp-content/uploads/2021/04/mmu-logo.png'
+      description: `Confirmation fee for Room ${room.number} — ${h.name}`,
+      logo: 'https://mmu.ac.ug/wp-content/uploads/2021/04/mmu-logo.png',
     },
     callback: async function(paymentData) {
       if (paymentData.status === 'successful') {
@@ -376,6 +378,7 @@ export async function confirmBooking() {
         const b = bookings.find(x => x.id === bookingId);
         if (b) b.status = 'confirmed';
 
+        window.__mmuBookings__ = bookings;
         await saveData();
         await auditLog('BOOKING_CREATED',
           `Room ${room.number} in ${h.name} booked by ${booking.studentName} (${booking.regNo}) via Flutterwave`,
@@ -398,12 +401,13 @@ export async function confirmBooking() {
         delete h.rooms[rIdx].regNo;
         const bIdx = bookings.findIndex(x => x.id === bookingId);
         if (bIdx !== -1) bookings.splice(bIdx, 1);
+        window.__mmuBookings__ = bookings;
         await saveData();
       }
       const reBtn = document.getElementById('cbtn');
-      if (reBtn) { reBtn.disabled = false; reBtn.textContent = `💳 Pay UGX ${amountToCharge}`; }
+      if (reBtn) { reBtn.disabled = false; reBtn.textContent = `💳 Pay ${formatPrice(amountToCharge)} Now`; }
       if (incomplete) showToast('Payment window closed. Room reservation cancelled.', 'warn');
-    }
+    },
   });
 }
 
@@ -413,11 +417,12 @@ export async function confirmRoomPayment(hostelId, roomId) {
   if (!h || !r) return;
 
   r.status = 'booked';
-  
+
   // Find associated pending booking
   const b = bookings.find(x => x.hostelId === hostelId && x.roomId === roomId && x.status === 'pending');
   if (b) b.status = 'confirmed';
 
+  window.__mmuBookings__ = bookings;
   await saveData();
   await auditLog('PAYMENT_CONFIRMED', `Admin confirmed payment for room ${r.number} in ${h.name}`);
   setState({});
@@ -445,6 +450,118 @@ export function lookupBooking() {
   } else {
     resEl.innerHTML = `<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-yellow-700 text-sm">No booking found for <b>${escapeHtml(raw)}</b>.</div>`;
   }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SHORTLIST / WISHLIST (Booking.com heart button)
+════════════════════════════════════════════════════════════════════════════ */
+export function toggleShortlist(hostelId) {
+  const current = state.shortlist ?? [];
+  const idx     = current.indexOf(hostelId);
+  let next;
+  if (idx === -1) {
+    next = [...current, hostelId];
+    showToast('Added to your shortlist! ❤️');
+  } else {
+    next = current.filter(id => id !== hostelId);
+    showToast('Removed from shortlist.', 'warn');
+  }
+  setState({ shortlist: next });
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   DOWNLOAD BOOKING SLIP
+════════════════════════════════════════════════════════════════════════════ */
+export function downloadBookingSlip(bookingId) {
+  // Open slip in a print-ready window
+  const booking = (window.__mmuBookings__ ?? bookings).find(b => b.id === bookingId);
+  if (!booking) { showToast('Booking not found.', 'error'); return; }
+
+  const h    = getHostel(booking.hostelId);
+  const room = h?.rooms.find(r => r.id === booking.roomId);
+
+  const formatP = n => 'UGX ' + Number(n).toLocaleString();
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Booking Slip – #${booking.id}</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #fff; margin: 0; padding: 2rem; color: #1f2937; }
+    .slip { max-width: 480px; margin: 0 auto; border: 2px solid #1a5c38; border-radius: 12px; overflow: hidden; }
+    .slip-header { background: linear-gradient(135deg, #0f3520, #1a5c38); color: #fff; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
+    .slip-body { padding: 1.25rem 1.5rem; }
+    .row { display: flex; justify-content: space-between; padding: .4rem 0; border-bottom: 1px solid #f3f4f6; font-size: .875rem; }
+    .row:last-child { border-bottom: none; }
+    .key { color: #6b7280; }
+    .val { font-weight: 700; text-align: right; }
+    .divider { border-top: 2px dashed #d1d5db; margin: .75rem 0; }
+    .ref { background: #f0fdf4; border-radius: .5rem; padding: .75rem; text-align: center; margin-top: 1rem; }
+    .ref-num { font-size: 1.5rem; font-weight: 800; color: #1a5c38; font-family: monospace; letter-spacing: .1em; }
+    .confirmed { color: #16a34a; font-size: .75rem; margin-top: .25rem; }
+    @media print { body { padding: 0; } button { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="slip">
+    <div class="slip-header">
+      <div style="font-size:2rem">🏠</div>
+      <div>
+        <div style="font-size:1.1rem;font-weight:800">MMU Hostel Booking</div>
+        <div style="font-size:.7rem;opacity:.75">Mountains of the Moon University · Fort Portal</div>
+      </div>
+    </div>
+    <div class="slip-body">
+      <div class="row"><span class="key">Student Name</span><span class="val">${escapeHtml(booking.studentName)}</span></div>
+      <div class="row"><span class="key">Reg Number</span><span class="val">${escapeHtml(booking.regNo)}</span></div>
+      <div class="row"><span class="key">Course</span><span class="val">${escapeHtml(booking.course)}</span></div>
+      <div class="row"><span class="key">Academic Year</span><span class="val">${escapeHtml(booking.year ?? '—')}</span></div>
+      <div class="row"><span class="key">Semester</span><span class="val">${escapeHtml(booking.semester ?? '—')}</span></div>
+      <div class="row"><span class="key">Phone</span><span class="val">${escapeHtml(booking.phone ?? '—')}</span></div>
+      <div class="divider"></div>
+      <div class="row"><span class="key">Hostel</span><span class="val">${escapeHtml(h?.name ?? '—')}</span></div>
+      <div class="row"><span class="key">Room</span><span class="val">${escapeHtml(room?.number ?? '—')} (${escapeHtml(room?.type ?? '—')})</span></div>
+      <div class="row"><span class="key">Floor</span><span class="val">${escapeHtml(room?.floor ?? '—')}</span></div>
+      <div class="row"><span class="key">Semester Fee</span><span class="val">${formatP(room?.price ?? 0)}</span></div>
+      <div class="row"><span class="key">Confirmation Paid</span><span class="val" style="color:#1a5c38">${formatP(room?.confirmationFee ?? 0)}</span></div>
+      <div class="row"><span class="key">Balance on Arrival</span><span class="val" style="color:#c9961a">${formatP((room?.price ?? 0) - (room?.confirmationFee ?? 0))}</span></div>
+      <div class="row"><span class="key">Booking Date</span><span class="val">${escapeHtml(booking.date ?? '—')}</span></div>
+      <div class="ref">
+        <div style="font-size:.65rem;color:#6b7280;margin-bottom:.25rem">BOOKING REFERENCE</div>
+        <div class="ref-num">#${escapeHtml(booking.id)}</div>
+        <div class="confirmed">✅ CONFIRMED · Paid via Flutterwave</div>
+      </div>
+    </div>
+  </div>
+  <p style="text-align:center;margin-top:1.5rem;font-size:.8rem;color:#6b7280">
+    Present this slip and your student ID on arrival to collect your room key.
+  </p>
+  <script>window.print();<\/script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=600,height=750');
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  } else {
+    showToast('Please allow popups to download your booking slip.', 'warn');
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ADMIN: SET HOSTEL STAR RATING
+════════════════════════════════════════════════════════════════════════════ */
+export async function setRating(hostelId, rating) {
+  const h = getHostel(hostelId);
+  if (!h) { showToast('Hostel not found.', 'error'); return; }
+  if (rating < 0 || rating > 5) { showToast('Rating must be between 0 and 5.', 'error'); return; }
+  h.rating = Math.round(rating * 10) / 10; // round to 1 decimal
+  await saveData();
+  await auditLog('RATING_SET', `Admin set rating ${h.rating} for ${h.name}`);
+  setState({});
+  showToast(`Rating updated to ${h.rating} ⭐ for ${h.name}.`);
 }
 
 /* ════════════════════════════════════════════════════════════════════════════

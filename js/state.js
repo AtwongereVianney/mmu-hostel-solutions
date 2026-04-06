@@ -12,7 +12,7 @@
 'use strict';
 
 import { touchSession } from './security.js';
-import { SEED_HOSTELS } from './data.js';
+import { SEED_HOSTELS, PRICE_RANGE } from './data.js';
 
 /* ── Mutable data stores ─────────────────────────────────────────────────── */
 export let hostels  = [...SEED_HOSTELS];   // replaced on load from storage
@@ -43,6 +43,18 @@ export const state = {
   fGender:     'All',
   fType:       'All',
   fSearch:     '',
+  fPriceMin:   PRICE_RANGE.min,
+  fPriceMax:   PRICE_RANGE.max,
+  fSemester:   'All',
+
+  /* shortlist (hostel IDs) */
+  shortlist:   [],
+
+  /* active tab on My Bookings page */
+  bookingsTab: 'search',     // 'search' | 'shortlist'
+
+  /* loading state (for skeleton screens) */
+  loading:     true,
 
   /* image upload staging */
   pendingImg:  null,

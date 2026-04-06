@@ -1,16 +1,17 @@
 /**
  * modals/index.js
  * ═══════════════════════════════════════════════════════════════════════════
- * Separation of Concerns: ALL modal HTML templates live here.
- * Each modal is a pure render function; no handlers, no state writes.
- * Handlers live in js/handlers/.
+ * Booking.com upgrades:
+ *   - Step 3 review: full price breakdown (semester fee + confirmation fee + balance)
+ *   - Success modal: "Download Booking Slip" button
+ *   - New modalBookingSlip() — printable receipt modal
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 'use strict';
 
 import { state }        from '../state.js';
-import { e, formatPrice, getHostel, mapEmbedUrl, mapLinkUrl, hostelCoverHtml } from '../utils.js';
+import { e, formatPrice, getHostel, mapEmbedUrl, mapLinkUrl, hostelCoverHtml, starRatingHtml } from '../utils.js';
 import { getCsrfToken, isLoginLocked, getBruteForceState } from '../security.js';
 import { ROOM_TYPES, FLOOR_OPTIONS, GENDER_OPTIONS, SEMESTERS, STUDY_YEARS } from '../data.js';
 
@@ -42,6 +43,7 @@ function modalContent() {
     case 'delRoomConf':   return modalDelRoom();
     case 'booking':       return modalBooking();
     case 'success':       return modalSuccess();
+    case 'bookingSlip':   return modalBookingSlip();
     default:              return '';
   }
 }
@@ -144,10 +146,17 @@ function modalHostelForm(isEdit) {
         </select>
       </div>
     </div>
-    <div>
-      <label class="lbl">Distance from Main Campus *</label>
-      <input id="hD" type="text" maxlength="60" placeholder="e.g. 0.4 km from Main Gate" class="inp"
-             value="${e(h?.distance ?? '')}"/>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label class="lbl">Distance from Main Campus *</label>
+        <input id="hD" type="text" maxlength="60" placeholder="e.g. 0.4 km from Main Gate" class="inp"
+               value="${e(h?.distance ?? '')}"/>
+      </div>
+      <div>
+        <label class="lbl">Star Rating (0–5)</label>
+        <input id="hRating" type="number" min="0" max="5" step="0.1" class="inp"
+               value="${h?.rating ?? ''}" placeholder="e.g. 4.2"/>
+      </div>
     </div>
     <div>
       <label class="lbl">Description</label>
@@ -204,7 +213,7 @@ function modalHostelForm(isEdit) {
 function modalViewHostel() {
   const h = getHostel(state.modalData.hostelId);
   if (!h) return '<div class="p-6 text-center text-gray-400">Hostel not found.</div>';
-  
+
   const s      = (() => { const t=h.rooms.length,b=h.rooms.filter(r=>r.status==='booked').length;return{t,b,a:t-b};})();
   const hasLoc = h.location?.lat && h.location?.lng;
 
@@ -212,7 +221,10 @@ function modalViewHostel() {
   ${mHead(h.name, '👁')}
   <div class="p-5 space-y-4">
     ${hostelCoverHtml(h)}
-    <div class="grid md:grid-cols-3 gap-3 mt-2">
+    <div class="flex items-center gap-3 mt-2">
+      ${h.rating ? starRatingHtml(h.rating) : ''}
+    </div>
+    <div class="grid md:grid-cols-3 gap-3">
       <div class="bg-green-50 rounded-xl p-3 text-center"><div class="text-2xl font-bold text-g">${s.a}</div><div class="text-xs text-gray-500">Available</div></div>
       <div class="bg-red-50   rounded-xl p-3 text-center"><div class="text-2xl font-bold text-red-600">${s.b}</div><div class="text-xs text-gray-500">Booked</div></div>
       <div class="bg-gray-50  rounded-xl p-3 text-center"><div class="text-2xl font-bold text-gray-600">${s.t}</div><div class="text-xs text-gray-500">Total</div></div>
@@ -366,7 +378,7 @@ function modalBooking() {
 
   const stepDot = (n) => {
     const cls = st > n ? 'done' : st === n ? 'active' : 'idle';
-    return `<div class="step-dot ${cls}">${n}</div>`;
+    return `<div class="step-dot ${cls}">${st > n ? '✓' : n}</div>`;
   };
   const stepLine = (n) => `<div class="step-line ${st > n ? 'done' : 'idle'}"></div>`;
 
@@ -384,7 +396,7 @@ function modalBooking() {
       ${stepDot(2)} ${stepLine(2)}
       ${stepDot(3)}
       <div class="ml-2 text-xs text-gray-500">
-        ${['Personal Info','Contact & Course','Review & Confirm'][st - 1]}
+        ${['Personal Info','Contact & Course','Review & Pay'][st - 1]}
       </div>
     </div>
 
@@ -427,7 +439,7 @@ function modalBooking() {
       </div>
       <div>
         <label class="lbl">Programme / Course *</label>
-        <input id="fC" type="text" maxlength="100" class="inp" placeholder="BSc Agriculture"
+        <input id="fC" type="text" maxlength="100" class="inp" placeholder="BSc Computer Science"
                value="${e(bd.course ?? '')}" oninput="App.liveVal(this,'course')"/>
       </div>
       <div>
@@ -446,6 +458,7 @@ function modalBooking() {
 
     ${st === 3 ? `
     <div>
+      <!-- Student + room summary -->
       <div class="bg-green-50 rounded-xl p-4 mb-4 text-sm">
         <div class="font-bold text-g mb-3">📋 Booking Summary</div>
         <div class="grid grid-cols-2 gap-1 text-xs">
@@ -460,16 +473,37 @@ function modalBooking() {
           <span class="text-gray-500">Hostel:</span> <b>${e(h.name)}</b>
           <span class="text-gray-500">Room:</span>   <b>${e(room.number)} (${e(room.type)})</b>
           <span class="text-gray-500">Floor:</span>  <b>${e(room.floor)}</b>
-          <span class="text-gray-500">Amount:</span> <b class="text-gold">${formatPrice(room.price)}/semester</b>
         </div>
       </div>
+
+      <!-- Price breakdown (Booking.com style) -->
+      <div class="bg-white border border-gray-200 rounded-xl p-4 mb-4 text-sm">
+        <div class="font-bold text-g mb-3">💰 Price Breakdown</div>
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-gray-500">Full semester fee</span>
+            <span class="font-semibold">${formatPrice(room.price)}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Pay now (confirmation fee)</span>
+            <span class="font-bold text-g">${formatPrice(room.confirmationFee || 0)}</span>
+          </div>
+          <div class="border-t pt-2 flex justify-between">
+            <span class="text-gray-500">Balance due on arrival</span>
+            <span class="font-semibold text-gold">${formatPrice(room.price - (room.confirmationFee || 0))}</span>
+          </div>
+        </div>
+      </div>
+
       <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-700 mb-4">
-        ⚠️ To secure this room, a confirmation fee of <b>${formatPrice(room.confirmationFee || 0)}</b> will be charged to your mobile number via Flutterwave. Please have your phone ready. By confirming, you agree to MMU hostel T&amp;Cs.
+        ⚠️ A confirmation fee of <b>${formatPrice(room.confirmationFee || 0)}</b> will be charged via Flutterwave (mobile money or card). By confirming, you agree to MMU hostel T&amp;Cs.
       </div>
       <div id="s3e" class="err-txt hidden bg-red-50 p-2 rounded mb-3"></div>
       <div class="flex gap-3">
         <button onclick="App.setState({ bStep: 2 })" class="btn-out flex-1">← Back</button>
-        <button onclick="App.confirmBooking()" id="cbtn" class="btn-gold flex-1">💳 Pay UGX ${room.confirmationFee || room.price}</button>
+        <button onclick="App.confirmBooking()" id="cbtn" class="btn-gold flex-1">
+          💳 Pay ${formatPrice(room.confirmationFee || room.price)} Now
+        </button>
       </div>
     </div>` : ''}
   </div>`;
@@ -479,6 +513,10 @@ function modalBooking() {
    SUCCESS
 ──────────────────────────────────────────────────────────────────────────── */
 function modalSuccess() {
+  // Extract booking ID from success message for the slip button
+  const refMatch = state.successMsg?.match(/Ref: #([A-Z0-9]+)/);
+  const bookingId = refMatch ? refMatch[1] : null;
+
   return `
   <div class="p-8 text-center">
     <div class="w-16 h-16 rounded-full bg-green-100 text-4xl flex items-center justify-center mx-auto mb-4">✅</div>
@@ -490,9 +528,75 @@ function modalSuccess() {
       <div>2. Present your booking reference and student ID upon arrival.</div>
       <div>3. Collect your room key from the Hostel Warden.</div>
     </div>
-    <div class="flex gap-3">
+    <div class="flex gap-3 flex-wrap">
       <button onclick="App.go('myBookings'); App.closeModal();" class="btn-g flex-1">View My Booking</button>
-      <button onclick="App.go('hostels');   App.closeModal();" class="btn-out flex-1">Back to Hostels</button>
+      ${bookingId ? `<button onclick="App.openModal('bookingSlip', { bookingId: '${bookingId}' })" class="btn-out flex-1">📄 Download Slip</button>` : ''}
+    </div>
+    <button onclick="App.go('hostels'); App.closeModal();" class="text-sm text-gray-400 hover:underline mt-3 block mx-auto">Back to Hostels</button>
+  </div>`;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BOOKING SLIP (printable receipt — Booking.com-style confirmation)
+──────────────────────────────────────────────────────────────────────────── */
+function modalBookingSlip() {
+  const { bookingId } = state.modalData;
+  const { bookings }  = (() => { const m = import.meta; return window.__mmuState__ ?? { bookings: [] }; })();
+
+  // Access bookings via the globally accessible state populated by handlers
+  const bArr    = window.__mmuBookings__ ?? [];
+  const booking = bArr.find(b => b.id === bookingId);
+
+  if (!booking) {
+    // Fallback: render the slip from successMsg
+    return `
+    ${mHead('Booking Slip', '📄')}
+    <div class="p-5 text-center">
+      <p class="text-gray-400 text-sm">Slip data not available. Please use "View My Booking" to find your booking.</p>
+      <button onclick="App.go('myBookings'); App.closeModal();" class="btn-g mt-4">My Bookings</button>
+    </div>`;
+  }
+
+  const h    = getHostel(booking.hostelId);
+  const room = h?.rooms.find(r => r.id === booking.roomId);
+
+  return `
+  ${mHead('Booking Slip', '📄')}
+  <div class="p-5">
+    <div class="slip-wrap">
+      <div class="slip-header">
+        <div style="font-size:2rem">🏠</div>
+        <div>
+          <div style="font-size:1rem;font-weight:800">MMU Hostel Booking</div>
+          <div style="font-size:.7rem;opacity:.75">Mountains of the Moon University · Fort Portal</div>
+        </div>
+      </div>
+      <div class="slip-body">
+        <div class="slip-row"><span class="slip-key">Student Name</span><span class="slip-val">${e(booking.studentName)}</span></div>
+        <div class="slip-row"><span class="slip-key">Reg Number</span><span class="slip-val">${e(booking.regNo)}</span></div>
+        <div class="slip-row"><span class="slip-key">Course</span><span class="slip-val">${e(booking.course)}</span></div>
+        <div class="slip-row"><span class="slip-key">Academic Year</span><span class="slip-val">${e(booking.year ?? '—')}</span></div>
+        <div class="slip-row"><span class="slip-key">Semester</span><span class="slip-val">${e(booking.semester ?? '—')}</span></div>
+        <div class="slip-row"><span class="slip-key">Phone</span><span class="slip-val">${e(booking.phone ?? '—')}</span></div>
+        <div style="border-top:2px dashed #d1d5db;margin:.75rem 0"></div>
+        <div class="slip-row"><span class="slip-key">Hostel</span><span class="slip-val">${e(h?.name ?? '—')}</span></div>
+        <div class="slip-row"><span class="slip-key">Room</span><span class="slip-val">${e(room?.number ?? '—')} (${e(room?.type ?? '—')})</span></div>
+        <div class="slip-row"><span class="slip-key">Floor</span><span class="slip-val">${e(room?.floor ?? '—')}</span></div>
+        <div class="slip-row"><span class="slip-key">Semester Fee</span><span class="slip-val">${formatPrice(room?.price ?? 0)}</span></div>
+        <div class="slip-row"><span class="slip-key">Confirmation Paid</span><span class="slip-val" style="color:var(--g)">${formatPrice(room?.confirmationFee ?? 0)}</span></div>
+        <div class="slip-row"><span class="slip-key">Balance on Arrival</span><span class="slip-val" style="color:var(--gold)">${formatPrice((room?.price ?? 0) - (room?.confirmationFee ?? 0))}</span></div>
+        <div class="slip-row"><span class="slip-key">Booking Date</span><span class="slip-val">${e(booking.date ?? '—')}</span></div>
+        <div class="slip-ref">
+          <div style="font-size:.65rem;color:#6b7280;margin-bottom:.25rem">BOOKING REFERENCE</div>
+          <div class="slip-ref-num">#${e(booking.id)}</div>
+          <div style="font-size:.65rem;color:#16a34a;margin-top:.25rem">✅ CONFIRMED · Paid via Flutterwave</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-3 mt-4 no-print">
+      <button onclick="App.downloadBookingSlip('${e(bookingId)}')" class="btn-g flex-1">🖨 Print Slip</button>
+      <button onclick="App.closeModal()" class="btn-out flex-1">Close</button>
     </div>
   </div>`;
 }
