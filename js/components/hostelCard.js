@@ -62,13 +62,23 @@ export function renderHostelCard(h) {
       </div>
 
       <!-- Price from + CTA -->
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between gap-2">
         ${minPrice
-          ? `<div>
+          ? `<div class="flex-1">
                <div class="text-xs text-gray-400">From</div>
                <div class="font-bold text-gold">${formatPrice(minPrice)}<span class="text-gray-400 font-normal text-xs">/sem</span></div>
              </div>`
-          : '<div class="text-xs text-gray-400">No rooms yet</div>'}
+          : '<div class="text-xs text-gray-400 flex-1">No rooms yet</div>'}
+        
+        <!-- WhatsApp Contact -->
+        ${h.managerPhone ? `
+          <a href="https://wa.me/${h.managerPhone.replace(/\D/g,'').replace(/^0/,'256')}" 
+             target="_blank" onclick="event.stopPropagation()"
+             class="w-9 h-9 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-colors"
+             title="Chat with Manager">
+            <span style="font-size:1.2rem">💬</span>
+          </a>` : ''}
+
         <button class="btn-g btn-sm" onclick="event.stopPropagation(); App.go('hostelDetail', { selH: ${h.id}, fType: 'All' })">
           View Rooms
         </button>
