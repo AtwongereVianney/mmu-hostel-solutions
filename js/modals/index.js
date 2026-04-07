@@ -44,6 +44,7 @@ function modalContent() {
     case 'booking':       return modalBooking();
     case 'success':       return modalSuccess();
     case 'bookingSlip':   return modalBookingSlip();
+    case 'addManager':    return modalAddManager();
     default:              return '';
   }
 }
@@ -92,7 +93,7 @@ function modalAdminLogin() {
       <div id="lErr" class="err-txt hidden bg-red-50 p-2 rounded"></div>
       ${!lk.locked && left < 5 ? `<div class="text-yellow-600 text-xs">⚠️ ${left} attempt(s) remaining</div>` : ''}
       <button id="lBtn" onclick="App.doLogin()" ${lk.locked ? 'disabled' : ''} class="btn-g w-full">Sign In</button>
-      <p class="text-xs text-center text-gray-400">Demo · <b>admin</b> / <b>admin123</b></p>
+      <p class="text-xs text-center text-gray-400">System Admin / Hostel Owner Login</p>
     </div>
   </div>`;
 }
@@ -621,6 +622,45 @@ function modalBookingSlip() {
     <div class="flex gap-3 mt-4 no-print">
       <button onclick="App.downloadBookingSlip('${e(bookingId)}')" class="btn-g flex-1">🖨 Print Slip</button>
       <button onclick="App.closeModal()" class="btn-out flex-1">Close</button>
+    </div>
+  </div>`;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ADD MANAGER (HOSTEL OWNER)
+──────────────────────────────────────────────────────────────────────────── */
+function modalAddManager() {
+  return `
+  ${mHead('Add New Manager', '👤')}
+  <div class="p-5 space-y-4">
+    <p class="text-xs text-gray-500">Create a new hostel owner account. They can manage assigned hostels but cannot delete them.</p>
+    
+    <div>
+      <label class="lbl">Full Name *</label>
+      <input id="mN" type="text" maxlength="60" placeholder="Manager Name" class="inp"/>
+    </div>
+    
+    <div>
+      <label class="lbl">Email Address (Login) *</label>
+      <input id="mE" type="email" maxlength="60" placeholder="email@example.com" class="inp"/>
+    </div>
+
+    <div>
+      <label class="lbl">Phone Number</label>
+      <input id="mPh" type="tel" maxlength="20" placeholder="+2567..." class="inp"/>
+    </div>
+
+    <div>
+      <label class="lbl">Initial Password *</label>
+      <input id="mP" type="password" maxlength="40" placeholder="••••••••" class="inp"/>
+      <div class="text-[10px] text-gray-400 mt-1">Provide a temporary password for the owner.</div>
+    </div>
+
+    <div id="mErr" class="err-txt hidden bg-red-50 p-2 rounded"></div>
+
+    <div class="flex gap-3 pt-2">
+      <button onclick="App.closeModal()" class="btn-out flex-1">Cancel</button>
+      <button id="mBtn" onclick="App.doAddManager()" class="btn-g flex-1">Create Account</button>
     </div>
   </div>`;
 }

@@ -28,8 +28,10 @@ export const state = {
   selH:        null,         // selected hostel id
   selR:        null,         // selected room id
 
-  /* admin */
+  /* admin / auth */
   adminMode:   false,
+  userRole:    null,         // 'super_admin' | 'hostel_owner'
+  currentUserId: null,
 
   /* modal */
   modal:       null,         // active modal name, or null
@@ -60,6 +62,7 @@ export const state = {
   pendingImg:  null,
 
   /* feedback */
+  adminTab:    'hostels',    // 'hostels' | 'bookings' | 'managers'
   toast:       null,         // { msg, type } or null
   successMsg:  '',
 };

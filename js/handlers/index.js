@@ -43,10 +43,10 @@ export async function doLogin() {
   const csrf = document.getElementById('lcsrf')?.value ?? '';
   if (!verifyCsrfToken(csrf)) { showToast('Invalid security token — please refresh.', 'error'); return; }
 
-  const username = sanitize(document.getElementById('aU')?.value ?? '', 30);
+  const username = sanitize(document.getElementById('aU')?.value ?? '', 60);
   const password = document.getElementById('aP')?.value ?? '';
 
-  if (!username || !password) { _fieldErr('lErr', 'Please enter username and password.'); return; }
+  if (!username || !password) { _fieldErr('lErr', 'Please enter email and password.'); return; }
 
   const bfSt = getBruteForceState();
   await new Promise(r => setTimeout(r, loginDelay(bfSt.n ?? 0)));
@@ -54,33 +54,82 @@ export async function doLogin() {
   const btn = document.getElementById('lBtn');
   if (btn) btn.disabled = true;
 
-  const inputHash  = await hashPassword(password);
-  const storedHash = await ADMIN_PASS_HASH;
+  try {
+    const res = await fetch('./new-hostel/api.php/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
 
-  if (username === 'admin' && inputHash === storedHash) {
-    resetBruteForce();
-    createSession();
-    await auditLog('ADMIN_LOGIN', 'Admin authenticated successfully');
-    setState({ adminMode: true, modal: null, view: 'admin' });
-    showToast('Welcome, Admin!');
-  } else {
-    const s    = recordFailedLogin();
-    await auditLog('LOGIN_FAIL', `Failed login attempt for: ${username}`);
-    const left = Math.max(0, 5 - (s.n ?? 0));
-    const msg  = s.until
-      ? '🔒 Too many failed attempts. Locked for 15 minutes.'
-      : `Invalid credentials. ${left} attempt(s) remaining.`;
-    _fieldErr('lErr', msg);
+    const json = await res.json();
+
+    if (json.success) {
+      resetBruteForce();
+      createSession();
+      await auditLog('LOGIN_SUCCESS', `User ${username} logged in as ${json.user.role}`);
+      
+      setState({
+        adminMode: true,
+        userRole: json.user.role,
+        currentUserId: json.user.id,
+        modal: null,
+        view: 'admin'
+      });
+      
+      showToast(`Welcome, ${json.user.name}!`);
+    } else {
+      const s = recordFailedLogin();
+      await auditLog('LOGIN_FAIL', `Failed login for: ${username} - ${json.error}`);
+      const left = Math.max(0, 5 - (s.n ?? 0));
+      _fieldErr('lErr', json.error || 'Invalid credentials.');
+      if (btn) btn.disabled = false;
+    }
+  } catch (e) {
+    _fieldErr('lErr', 'Network error. Please try again.');
     if (btn) btn.disabled = false;
-    setState({}); // re-render so attempt counter updates
   }
 }
 
 export async function doLogout() {
   destroySession();
-  await auditLog('ADMIN_LOGOUT', 'Admin logged out');
-  setState({ adminMode: false, view: 'home' });
+  await auditLog('LOGOUT', 'User logged out');
+  setState({ adminMode: false, userRole: null, currentUserId: null, view: 'home' });
   showToast('Logged out successfully.');
+}
+
+/** [NEW] Create a new manager account */
+export async function doAddManager() {
+  const name = sanitize(document.getElementById('mN')?.value ?? '');
+  const email = sanitize(document.getElementById('mE')?.value ?? '', 60);
+  const pass = document.getElementById('mP')?.value ?? '';
+  const phone = sanitize(document.getElementById('mPh')?.value ?? '');
+  const roleId = 2; // hostel_owner
+
+  if (!name || !email || !pass) { _fieldErr('mErr', 'Name, Email and Password are required.'); return; }
+  if (!validate('email', email)) { _fieldErr('mErr', 'Invalid email address.'); return; }
+
+  const btn = document.getElementById('mBtn');
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch('./new-hostel/api.php/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password: pass, phone, role_id: roleId, status: 'active' })
+    });
+    const json = await res.json();
+    if (json.success) {
+      await auditLog('MANAGER_ADDED', `Admin added manager: ${name} (${email})`);
+      setState({ modal: null });
+      showToast(`Manager "${name}" added successfully!`);
+    } else {
+      _fieldErr('mErr', json.error || 'Failed to add manager.');
+      if (btn) btn.disabled = false;
+    }
+  } catch (e) {
+    _fieldErr('mErr', 'Network error.');
+    if (btn) btn.disabled = false;
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -166,6 +215,10 @@ export async function doEditHostel() {
 }
 
 export async function doDelHostel() {
+  if (state.userRole !== 'super_admin') {
+    showToast('Only Super Admin can delete hostels.', 'error');
+    return;
+  }
   const id = state.modalData.hostelId;
   const h  = getHostel(id);
   if (!h) return;

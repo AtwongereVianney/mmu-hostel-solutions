@@ -115,6 +115,23 @@ export async function loadData() {
   setBookings(Array.isArray(bookings) ? bookings : []);
 }
 
+/** Fetch all users (admin only) */
+export async function loadUsers(role = null) {
+  const endpoint = role ? `users?role=${role}` : 'users';
+  const data = await apiRequest(endpoint);
+  return Array.isArray(data) ? data : [];
+}
+
+/** Re-load hostels filtered by owner */
+export async function loadOwnerHostels(ownerId) {
+  const hostelsData = await apiRequest(`hostels?owner_id=${ownerId}`);
+  if (hostelsData && Array.isArray(hostelsData)) {
+    setHostels(hostelsData);
+    return true;
+  }
+  return false;
+}
+
 /** Persist current hostels and bookings to API and localStorage */
 export async function saveData() {
   const { hostels, bookings } = await import('./state.js');

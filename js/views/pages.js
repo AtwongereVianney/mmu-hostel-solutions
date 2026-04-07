@@ -330,16 +330,29 @@ export function renderAdmin() {
   }
 
   const s = allStats();
+  const tab = state.adminTab ?? 'hostels';
 
   return `
   <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
     <div>
       <h2 class="text-g text-2xl">Admin Panel</h2>
-      <div class="text-xs text-gray-500">Session active · Auto-logout after 30 min idle</div>
+      <div class="text-xs text-gray-500">Logged in as <b>${e(state.userRole)}</b> · Session active</div>
     </div>
-    <button onclick="App.requireAdmin() && App.openModal('addHostel', {})" class="btn-g">+ Add Hostel</button>
+    <div class="flex gap-2">
+      ${state.userRole === 'super_admin' ? `<button onclick="App.openModal('addManager', {})" class="btn-out text-sm">+ Add Manager</button>` : ''}
+      <button onclick="App.requireAdmin() && App.openModal('addHostel', {})" class="btn-g">+ Add Hostel</button>
+    </div>
   </div>
 
+  <!-- Tab switcher -->
+  <div class="flex gap-2 mb-6">
+    <button class="tab-btn ${tab==='hostels'  ? 'active' : ''}" onclick="App.setState({ adminTab: 'hostels' })">🏢 Hostels</button>
+    <button class="tab-btn ${tab==='bookings' ? 'active' : ''}" onclick="App.setState({ adminTab: 'bookings' })">📅 Bookings</button>
+    ${state.userRole === 'super_admin' ? `<button class="tab-btn ${tab==='managers' ? 'active' : ''}" onclick="App.setState({ adminTab: 'managers' })">👥 Managers</button>` : ''}
+    <button class="tab-btn" onclick="App.go('security')">🔐 Security</button>
+  </div>
+
+  ${tab === 'hostels' ? `
   <!-- Stats -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     ${[['Hostels',hostels.length,'🏢'],['Total Rooms',s.t,'🚪'],['Available',s.a,'✅'],['Booked',s.b,'🔴']].map(([l,v,ic])=>
@@ -352,6 +365,7 @@ export function renderAdmin() {
 
   <!-- Hostels Table -->
   <div class="space-y-4 mb-6">
+    ${hostels.length === 0 ? '<div class="text-center py-10 text-gray-400 bg-white rounded-xl shadow-card">No hostels assigned to you yet.</div>' : ''}
     ${hostels.map(h => {
       const hs = roomStats(h);
       return `
@@ -363,7 +377,6 @@ export function renderAdmin() {
               <div class="font-bold text-g">${e(h.name)}</div>
               <div class="text-xs text-gray-500">${e(h.distance)} · ${e(h.gender)}</div>
               ${h.location?.address ? `<div class="text-xs text-gray-400">📍 ${e(h.location.address.slice(0,45))}</div>` : ''}
-              <!-- Star rating with editable input -->
               <div class="flex items-center gap-2 mt-1">
                 ${h.rating ? starRatingHtml(h.rating, true) : '<span class="text-xs text-gray-400">No rating</span>'}
                 <input type="number" min="0" max="5" step="0.1"
@@ -381,7 +394,7 @@ export function renderAdmin() {
             <button onclick="App.requireAdmin() && App.openModal('viewHostel',  { hostelId:${h.id} })" class="btn-out btn-sm">👁 View</button>
             <button onclick="App.requireAdmin() && App.openModal('editHostel',  { hostelId:${h.id} })" class="btn-out btn-sm" style="border-color:var(--g);color:var(--g)">✏️ Edit</button>
             <button onclick="App.requireAdmin() && App.openModal('addRoom',     { hostelId:${h.id} })" class="btn-out btn-sm" style="border-color:#2563eb;color:#2563eb">+ Room</button>
-            <button onclick="App.requireAdmin() && App.openModal('delHostelConf',{ hostelId:${h.id} })" class="btn-red btn-sm">🗑 Delete</button>
+            ${state.userRole === 'super_admin' ? `<button onclick="App.requireAdmin() && App.openModal('delHostelConf',{ hostelId:${h.id} })" class="btn-red btn-sm">🗑 Delete</button>` : ''}
           </div>
         </div>
         <div class="overflow-x-auto">
@@ -418,8 +431,10 @@ export function renderAdmin() {
       </div>`;
     }).join('')}
   </div>
+  ` : ''}
 
-  <!-- Bookings log -->
+  <!-- Bookings Tab -->
+  ${tab === 'bookings' ? `
   <div class="bg-white rounded-xl shadow-card p-5">
     <h3 class="text-g text-lg mb-3">All Bookings (${bookings.length})</h3>
     ${bookings.length ? `
@@ -447,7 +462,51 @@ export function renderAdmin() {
         </tbody>
       </table>
     </div>` : '<p class="text-gray-400 text-sm text-center py-4">No bookings yet.</p>'}
-  </div>`;
+  </div>
+  ` : ''}
+
+  <!-- Managers Tab -->
+  ${tab === 'managers' && state.userRole === 'super_admin' ? `
+  <div class="bg-white rounded-xl shadow-card p-5">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-g text-lg">System Managers (Hostel Owners)</h3>
+        <button onclick="App.openModal('addManager')" class="btn-g btn-sm">+ Add New Manager</button>
+    </div>
+    <div id="managersList" class="min-h-[200px]">
+        <p class="text-center py-12 text-gray-400">Loading managers...</p>
+    </div>
+    <script>
+      (function() {
+        const wrap = document.getElementById('managersList');
+        if (!wrap) return;
+        import('./js/storage.js').then(m => m.loadUsers('hostel_owner')).then(users => {
+          if (!users || users.length === 0) {
+            wrap.innerHTML = '<p class="text-center py-8 text-gray-400">No managers found.</p>';
+            return;
+          }
+          let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="tbl-hd"><tr>' +
+                     '<th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Actions</th>' +
+                     '</tr></thead><tbody>';
+          users.forEach(u => {
+            const badge = u.status === "active" ? "badge-ok" : "badge-warn";
+            const btnClr = u.status === "active" ? "text-red-500" : "text-green-600";
+            const btnTxt = u.status === "active" ? "Suspend" : "Activate";
+            const nextSt = u.status === "active" ? "suspended" : "active";
+            html += '<tr class="tbl-row">' +
+                    '<td class="font-semibold">' + Sec.sanitize(u.name) + '</td>' +
+                    '<td class="text-xs text-gray-500">' + Sec.sanitize(u.email) + '</td>' +
+                    '<td class="text-xs text-gray-500">' + Sec.sanitize(u.phone) + '</td>' +
+                    '<td><span class="text-xs px-2 py-0.5 rounded-full font-semibold ' + badge + '">' + u.status + '</span></td>' +
+                    '<td><button onclick="App.doUpdateUserStatus(' + u.id + ', \\'' + nextSt + '\\')" class="text-xs font-semibold ' + btnClr + ' hover:underline">' + btnTxt + '</button></td>' +
+                    '</tr>';
+          });
+          html += '</tbody></table></div>';
+          wrap.innerHTML = html;
+        });
+      })();
+    </script>
+  </div>
+  ` : ''}`;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
