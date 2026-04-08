@@ -30,6 +30,24 @@ export const state = {
 
   /* admin */
   adminMode:   false,
+  adminUser:   '',
+  userId:      null,
+  userEmail:   '',
+  userRole:    '',
+  userPermissions: {},
+  assignedHostelIds: [],
+  managers:    [],
+  managersLoading: false,
+  managersLoaded: false,
+  roles:       [],
+  rolesLoading: false,
+  rolesLoaded: false,
+  permissions: [],
+  permissionsLoading: false,
+  permissionsLoaded: false,
+  users: [],
+  usersLoading: false,
+  usersLoaded: false,
 
   /* modal */
   modal:       null,         // active modal name, or null

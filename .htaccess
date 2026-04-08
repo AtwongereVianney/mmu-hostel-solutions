@@ -7,7 +7,10 @@ Options -Indexes
 
 # ── HTTPS Redirect ──────────────────────────────────────────────────────────
 RewriteEngine On
+# In local/WAMP we run over HTTP only, so don't force HTTPS for localhost.
 RewriteCond %{HTTPS} off
+RewriteCond %{HTTP_HOST} !^localhost$ [NC]
+RewriteCond %{HTTP_HOST} !^127\.0\.0\.1$ [NC]
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # ── SPA Routing (all paths → index.html) ────────────────────────────────────
@@ -15,6 +18,8 @@ RewriteBase /
 RewriteRule ^index\.html$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+# Don't route PHP pages to SPA index.html
+RewriteCond %{REQUEST_URI} !\.php$ [NC]
 RewriteRule . /index.html [L]
 
 # ── Security Headers ─────────────────────────────────────────────────────────
@@ -25,7 +30,8 @@ RewriteRule . /index.html [L]
     Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
     Header always set X-XSS-Protection "1; mode=block"
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https://www.openstreetmap.org; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
+    # Allow XHR/fetch to the local PHP API and (when developing) the :3000 frontend.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https://www.openstreetmap.org; connect-src 'self' http://localhost http://127.0.0.1 http://localhost:3000 http://127.0.0.1:3000 https://api.flutterwave.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
 </IfModule>
 
 # ── Caching ───────────────────────────────────────────────────────────────────

@@ -81,8 +81,8 @@ function modalAdminLogin() {
     <input type="hidden" id="lcsrf" value="${e(csrf)}"/>
     <div class="space-y-4">
       <div>
-        <label class="lbl">Username</label>
-        <input id="aU" type="text" maxlength="30" placeholder="admin" class="inp"
+        <label class="lbl">Username or Email</label>
+        <input id="aU" type="text" maxlength="80" placeholder="admin or manager@email.com" class="inp"
                ${lk.locked ? 'disabled' : ''} onkeydown="if(event.key==='Enter') App.doLogin()"/>
       </div>
       <div>
@@ -420,9 +420,9 @@ function modalBooking() {
       </div>
       <div>
         <label class="lbl">Registration Number *</label>
-        <input id="fR" type="text" maxlength="40" class="inp uppercase" placeholder="2026/U/MMU/CCS/0000001"
+        <input id="fR" type="text" maxlength="40" class="inp uppercase" placeholder="2026/U/MMU/CCS/STUDENTNUMBER"
                value="${e(bd.regNo ?? '')}" oninput="App.liveVal(this,'regNo')"/>
-        <div class="text-xs text-gray-400 mt-1">Format: YYYY/U/MMU/COURSE/NNNNNNN</div>
+        <div class="text-xs text-gray-400 mt-1">Format: YYYY/U/MMU/COURSE/STUDENTNUMBER</div>
       </div>
       <div>
         <label class="lbl">Year of Study *</label>
@@ -495,33 +495,33 @@ function modalBooking() {
         </div>
       </div>
 
-      <!-- Price breakdown (Booking.com style) -->
+      <!-- Booking request details -->
       <div class="bg-white border border-gray-200 rounded-xl p-4 mb-4 text-sm">
-        <div class="font-bold text-g mb-3">💰 Price Breakdown</div>
+        <div class="font-bold text-g mb-3">📝 Request Details</div>
         <div class="space-y-2 text-xs">
           <div class="flex justify-between">
-            <span class="text-gray-500">Full semester fee</span>
+            <span class="text-gray-500">Room semester fee</span>
             <span class="font-semibold">${formatPrice(room.price)}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500">Pay now (confirmation fee)</span>
+            <span class="text-gray-500">Confirmation fee</span>
             <span class="font-bold text-g">${formatPrice(room.confirmationFee || 0)}</span>
           </div>
           <div class="border-t pt-2 flex justify-between">
-            <span class="text-gray-500">Balance due on arrival</span>
+            <span class="text-gray-500">Pay on check-in</span>
             <span class="font-semibold text-gold">${formatPrice(room.price - (room.confirmationFee || 0))}</span>
           </div>
         </div>
       </div>
 
       <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-700 mb-4">
-        ⚠️ A confirmation fee of <b>${formatPrice(room.confirmationFee || 0)}</b> will be pushed directly to your phone via Mobile Money. Please have your phone ready to enter your PIN. By confirming, you agree to MMU hostel T&amp;Cs.
+        ⚠️ By confirming, your request will be sent to the assigned hostel manager on WhatsApp and the booking will remain <b>pending</b> until confirmed by manager/admin.
       </div>
       <div id="s3e" class="err-txt hidden bg-red-50 p-2 rounded mb-3"></div>
       <div class="flex gap-3">
         <button onclick="App.setState({ bStep: 2 })" class="btn-out flex-1">← Back</button>
-        <button onclick="App.confirmBooking()" id="cbtn" class="btn-gold flex-1">
-          💳 Pay ${formatPrice(room.confirmationFee || room.price)} Now
+        <button onclick="App.confirmBooking()" id="cbtn" class="btn-g flex-1">
+          ✅ Confirm Booking Request
         </button>
       </div>
     </div>` : ''}
@@ -539,13 +539,13 @@ function modalSuccess() {
   return `
   <div class="p-8 text-center">
     <div class="w-16 h-16 rounded-full bg-green-100 text-4xl flex items-center justify-center mx-auto mb-4">✅</div>
-    <h3 class="text-g text-2xl mb-2">Booking Confirmed!</h3>
+    <h3 class="text-g text-2xl mb-2">Booking Request Submitted!</h3>
     <p class="text-gray-500 text-sm mb-4">${e(state.successMsg)}</p>
     <div class="bg-green-50 rounded-xl p-4 text-sm text-left mb-5 space-y-1">
       <div class="font-bold text-g mb-1">Next Steps:</div>
-      <div>1. Your booking is 100% confirmed via digital payment.</div>
-      <div>2. Present your booking reference and student ID upon arrival.</div>
-      <div>3. Collect your room key from the Hostel Warden.</div>
+      <div>1. Your booking request is now pending review.</div>
+      <div>2. The assigned hostel manager has been notified on WhatsApp.</div>
+      <div>3. You can track status in My Bookings using your reference.</div>
     </div>
     <div class="flex gap-2 flex-wrap">
       <button onclick="App.go('myBookings'); App.closeModal();" class="btn-g flex-1">View My Booking</button>
@@ -630,10 +630,23 @@ function modalBookingSlip() {
    ADD MANAGER (HOSTEL OWNER)
 ──────────────────────────────────────────────────────────────────────────── */
 function modalAddManager() {
+  if (!state.rolesLoaded && !state.rolesLoading) {
+    setTimeout(() => window.App?.ensureRolesLoaded?.(), 0);
+  }
+  if (!state.permissionsLoaded && !state.permissionsLoading) {
+    setTimeout(() => window.App?.ensurePermissionsLoaded?.(), 0);
+  }
+  const roleOptions = (state.roles || [])
+    .map(r => `<option value="${r.id}">${e(r.name)}</option>`)
+    .join('');
+  const permOptions = (state.permissions || [])
+    .map(p => `<label><input type="checkbox" id="mPerm_${p.id}"> ${e(p.name)}</label>`)
+    .join('');
+
   return `
-  ${mHead('Add New Manager', '👤')}
+  ${mHead('Add User Account', '👤')}
   <div class="p-5 space-y-4">
-    <p class="text-xs text-gray-500">Create a new hostel owner account. They can manage assigned hostels but cannot delete them.</p>
+    <p class="text-xs text-gray-500">Create a new user account and assign role/permissions.</p>
     
     <div>
       <label class="lbl">Full Name *</label>
@@ -654,6 +667,38 @@ function modalAddManager() {
       <label class="lbl">Initial Password *</label>
       <input id="mP" type="password" maxlength="40" placeholder="••••••••" class="inp"/>
       <div class="text-[10px] text-gray-400 mt-1">Provide a temporary password for the owner.</div>
+    </div>
+
+    <div>
+      <label class="lbl">Role</label>
+      <select id="mRole" class="inp">
+        <option value="">No specific role</option>
+        ${roleOptions}
+      </select>
+      <div class="text-[10px] text-gray-400 mt-1">${state.rolesLoading ? 'Loading roles...' : 'Optional: assign a role from roles table.'}</div>
+    </div>
+
+    <div>
+      <label class="lbl">User Type</label>
+      <select id="mUserType" class="inp">
+        <option value="hostel_owner">hostel_owner</option>
+        <option value="student">student</option>
+        <option value="admin">admin</option>
+      </select>
+    </div>
+
+    <div class="bg-gray-50 rounded-xl p-3">
+      <div class="text-xs font-semibold text-g mb-2">Permissions</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+        ${state.permissionsLoading ? '<span class="text-gray-400 text-xs">Loading permissions...</span>' : ''}
+        ${permOptions || `
+          <label><input type="checkbox" id="mPermDefaultViewHostels" checked> view_hostels</label>
+          <label><input type="checkbox" id="mPermDefaultEditHostel" checked> edit_hostel</label>
+          <label><input type="checkbox" id="mPermDefaultManageRooms" checked> manage_rooms</label>
+          <label><input type="checkbox" id="mPermDefaultViewBookings" checked> view_bookings</label>
+          <label><input type="checkbox" id="mPermDefaultManageBookings"> manage_bookings</label>
+        `}
+      </div>
     </div>
 
     <div id="mErr" class="err-txt hidden bg-red-50 p-2 rounded"></div>

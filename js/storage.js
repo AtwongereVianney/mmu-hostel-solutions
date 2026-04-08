@@ -13,7 +13,17 @@ import { encryptForStorage, decryptFromStorage, loadAuditLog } from './security.
 import { SEED_HOSTELS } from './data.js';
 import { setHostels, setBookings } from './state.js';
 
-const API_BASE_URL = './new-hostel/api.php';
+function getApiBaseUrl() {
+  // When running the static frontend via `npm run dev` (serve on :3000),
+  // the PHP backend is on Apache (usually :80).
+  if (window.location.port === '3000') {
+    return 'http://localhost/mmu-hostel%20solutions/new-hostel/api.php';
+  }
+  // When running the app via Apache, the API is same-origin.
+  return './new-hostel/api.php';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 const STORAGE_KEYS = Object.freeze({
   hostels:  'mmu_hostels_v3',
   bookings: 'mmu_bookings_v3',
@@ -44,6 +54,63 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
     console.warn(`API request failed for ${endpoint}:`, error.message);
     return null;
   }
+}
+
+export async function loadUsers(role = 'hostel_owner') {
+  const q = encodeURIComponent(role);
+  const users = await apiRequest(`users?role=${q}`, 'GET');
+  return Array.isArray(users) ? users : [];
+}
+
+export async function loadUserById(id) {
+  const user = await apiRequest(`users?id=${encodeURIComponent(id)}`, 'GET');
+  return user && typeof user === 'object' ? user : null;
+}
+
+export async function createUser(payload) {
+  return apiRequest('users', 'POST', payload);
+}
+
+export async function loginUser(email, password) {
+  return apiRequest('login', 'POST', { email, password });
+}
+
+export async function updateUserStatus(id, status) {
+  return apiRequest('users', 'PUT', { id, status });
+}
+
+export async function loadRoles() {
+  const roles = await apiRequest('roles', 'GET');
+  return Array.isArray(roles) ? roles : [];
+}
+
+export async function createRole(name, business_id = 1, branch_id = 1) {
+  return apiRequest('roles', 'POST', { name, business_id, branch_id });
+}
+
+export async function loadPermissions() {
+  const perms = await apiRequest('permissions', 'GET');
+  return Array.isArray(perms) ? perms : [];
+}
+
+export async function createPermission(name, business_id = 1, branch_id = 1) {
+  return apiRequest('permissions', 'POST', { name, business_id, branch_id });
+}
+
+export async function seedDefaultPermissions(business_id = 1, branch_id = 1) {
+  return apiRequest('permissions', 'POST', { seed_defaults: true, business_id, branch_id });
+}
+
+export async function updateUserAccess(id, payload = {}) {
+  return apiRequest('users', 'PUT', { id, ...payload });
+}
+
+export async function assignHostelOwner(hostelId, ownerId) {
+  return apiRequest('hostels', 'PUT', { id: hostelId, owner_id: ownerId });
+}
+
+export async function sendApprovedBookingCredentials(payload) {
+  return apiRequest('booking-approval', 'POST', payload);
 }
 
 /* ── Secure localStorage helpers (fallback) ─────────────────────────────── */
@@ -77,7 +144,7 @@ export async function loadData() {
       apiRequest('bookings')
     ]);
 
-    if (hostelsData && Array.isArray(hostelsData)) {
+    if (Array.isArray(hostelsData) && hostelsData.length > 0) {
       hostels = hostelsData;
       // Cache in localStorage for offline access
       await secureSet(STORAGE_KEYS.hostels, hostels);
@@ -107,6 +174,30 @@ export async function loadData() {
       if (seed && !h.managerPhone) {
         h.managerPhone = seed.managerPhone;
       }
+      // Normalize DB hostels so UI components never crash on missing fields
+      // (DB schema stores only a subset; UI expects richer fields).
+      h.rooms = Array.isArray(h.rooms) ? h.rooms : [];
+      h.amenities = Array.isArray(h.amenities) ? h.amenities : (seed?.amenities ?? []);
+      h.gender = h.gender ?? seed?.gender ?? 'Mixed';
+      h.distance = h.distance ?? seed?.distance ?? '';
+      h.image = h.image ?? seed?.image ?? null;
+      h.emoji = h.emoji ?? seed?.emoji ?? '🏠';
+      h.color = h.color ?? seed?.color ?? '#1a5c38';
+      h.rating = (h.rating ?? seed?.rating ?? 0);
+      h.location = h.location ?? seed?.location ?? { address: h.address ?? '', lat: '', lng: '' };
+
+      // Normalize room shapes/fields for UI
+      h.rooms = h.rooms.map(r => ({
+        id: r.id,
+        number: r.number ?? r.room_number ?? '',
+        type: r.type ?? '',
+        price: Number(r.price ?? 0),
+        confirmationFee: Number(r.confirmationFee ?? 50000),
+        status: r.status ?? 'available',
+        floor: r.floor ?? null,
+        bookedBy: r.bookedBy ?? null,
+        regNo: r.regNo ?? null,
+      }));
       return h;
     });
   }
@@ -125,28 +216,14 @@ export async function saveData() {
 
   // Try to sync with API (don't block on failure)
   try {
-    // Sync hostels
-    const currentHostels = await apiRequest('hostels');
-    if (currentHostels) {
-      // Find new hostels to add
-      const existingIds = new Set(currentHostels.map(h => h.id));
-      const newHostels = hostels.filter(h => !existingIds.has(h.id));
-
-      for (const hostel of newHostels) {
-        await apiRequest('hostels', 'POST', hostel);
-      }
+    // Sync hostels (upsert + room status persistence is handled server-side)
+    for (const hostel of Array.isArray(hostels) ? hostels : []) {
+      await apiRequest('hostels', 'POST', hostel);
     }
 
-    // Sync bookings
-    const currentBookings = await apiRequest('bookings');
-    if (currentBookings) {
-      // Find new bookings to add
-      const existingIds = new Set(currentBookings.map(b => b.id));
-      const newBookings = bookings.filter(b => !existingIds.has(b.id));
-
-      for (const booking of newBookings) {
-        await apiRequest('bookings', 'POST', booking);
-      }
+    // Sync bookings (upserted server-side by user+room+start_date)
+    for (const booking of Array.isArray(bookings) ? bookings : []) {
+      await apiRequest('bookings', 'POST', booking);
     }
   } catch (error) {
     console.warn('Failed to sync with API:', error);

@@ -11,7 +11,7 @@
 'use strict';
 
 import { state, setState, hostels, bookings, setBookings } from '../state.js';
-import { saveData }  from '../storage.js';
+import { saveData, createUser, updateUserStatus, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials }  from '../storage.js';
 import { showToast } from '../components/toast.js';
 import {
   sanitize, validate, hashPassword,
@@ -31,6 +31,47 @@ function _fieldErr(elId, msg) {
   if (!el) return;
   el.textContent = msg;
   el.classList.remove('hidden');
+}
+
+function hasPermission(permission) {
+  if (state.userRole === 'admin') return true;
+  const perms = state.userPermissions || {};
+  return !!perms[permission] || !!perms.system_admin;
+}
+
+function canManageHostel(hostelId) {
+  if (state.userRole === 'admin') return true;
+  const id = Number(hostelId);
+  return Array.isArray(state.assignedHostelIds) && state.assignedHostelIds.some(hid => Number(hid) === id);
+}
+
+let _lastAccessSyncAt = 0;
+async function ensureLiveAccessSync() {
+  // Admin is always full-access, no sync needed.
+  if (state.userRole === 'admin') return true;
+  if (!state.userId) return true;
+
+  const now = Date.now();
+  // Keep this lightweight: at most one refresh every 5 seconds.
+  if (now - _lastAccessSyncAt < 5000) return true;
+  _lastAccessSyncAt = now;
+
+  const user = await loadUserById(state.userId);
+  if (!user) return true;
+
+  if (user.status === 'suspended') {
+    destroySession();
+    setState({ adminMode: false, adminUser: '', userId: null, userRole: '', userPermissions: {}, assignedHostelIds: [], view: 'home' });
+    showToast('Your account was suspended. Please contact admin.', 'error');
+    return false;
+  }
+
+  setState({
+    userRole: user.role || state.userRole,
+    userPermissions: user.permissions || {},
+    assignedHostelIds: Array.isArray(user.assigned_hostel_ids) ? user.assigned_hostel_ids : [],
+  });
+  return true;
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -61,9 +102,42 @@ export async function doLogin() {
     resetBruteForce();
     createSession();
     await auditLog('ADMIN_LOGIN', 'Admin authenticated successfully');
-    setState({ adminMode: true, modal: null, view: 'admin' });
+    setState({
+      adminMode: true,
+      adminUser: username,
+      userId: 0,
+      userEmail: '',
+      userRole: 'admin',
+      userPermissions: { system_admin: true },
+      assignedHostelIds: [],
+      modal: null,
+      view: 'admin'
+    });
     showToast('Welcome, Admin!');
   } else {
+    try {
+      const res = await loginUser(username, password);
+      const user = res?.user ?? null;
+      if (res?.success && user && ['admin', 'hostel_owner', 'student'].includes(user.user_type)) {
+        resetBruteForce();
+        createSession();
+        await auditLog('USER_LOGIN', `User authenticated: ${user.email} (${user.user_type})`);
+        setState({
+          adminMode: user.user_type !== 'student',
+          adminUser: user.name || user.email,
+          userId: Number(user.id) || null,
+          userEmail: user.email || '',
+          userRole: user.user_type,
+          userPermissions: user.permissions || {},
+          assignedHostelIds: Array.isArray(user.assigned_hostel_ids) ? user.assigned_hostel_ids : [],
+          modal: null,
+          view: user.user_type === 'student' ? 'myBookings' : 'admin',
+        });
+        showToast(`Welcome, ${user.name || 'User'}!`);
+        return;
+      }
+    } catch (e) {}
+
     const s    = recordFailedLogin();
     await auditLog('LOGIN_FAIL', `Failed login attempt for: ${username}`);
     const left = Math.max(0, 5 - (s.n ?? 0));
@@ -72,15 +146,253 @@ export async function doLogin() {
       : `Invalid credentials. ${left} attempt(s) remaining.`;
     _fieldErr('lErr', msg);
     if (btn) btn.disabled = false;
-    setState({}); // re-render so attempt counter updates
+    setState({});
   }
 }
 
 export async function doLogout() {
   destroySession();
   await auditLog('ADMIN_LOGOUT', 'Admin logged out');
-  setState({ adminMode: false, view: 'home' });
+  setState({ adminMode: false, adminUser: '', userId: null, userEmail: '', userRole: '', userPermissions: {}, assignedHostelIds: [], view: 'home' });
   showToast('Logged out successfully.');
+}
+
+export async function doAddManager() {
+  const name = sanitize(document.getElementById('mN')?.value ?? '', 60);
+  const email = sanitize(document.getElementById('mE')?.value ?? '', 80);
+  const phone = sanitize(document.getElementById('mPh')?.value ?? '', 20);
+  const password = document.getElementById('mP')?.value ?? '';
+  const roleIdRaw = document.getElementById('mRole')?.value ?? '';
+  const roleId = roleIdRaw ? parseInt(roleIdRaw, 10) : null;
+  const userType = (document.getElementById('mUserType')?.value ?? 'hostel_owner').trim();
+  const permissions = {};
+  for (const p of (state.permissions || [])) {
+    permissions[p.name] = !!document.getElementById(`mPerm_${p.id}`)?.checked;
+  }
+  if (Object.keys(permissions).length === 0) {
+    permissions.view_hostels = !!document.getElementById('mPermDefaultViewHostels')?.checked;
+    permissions.edit_hostel = !!document.getElementById('mPermDefaultEditHostel')?.checked;
+    permissions.manage_rooms = !!document.getElementById('mPermDefaultManageRooms')?.checked;
+    permissions.view_bookings = !!document.getElementById('mPermDefaultViewBookings')?.checked;
+    permissions.manage_bookings = !!document.getElementById('mPermDefaultManageBookings')?.checked;
+  }
+  const errEl = document.getElementById('mErr');
+  const btn = document.getElementById('mBtn');
+
+  if (!name || !email || password.length < 6) {
+    _fieldErr(errEl, 'Name, email and password (min 6 chars) are required.');
+    return;
+  }
+  if (!validate('email', email)) {
+    _fieldErr(errEl, 'Invalid email format.');
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  try {
+    const res = await createUser({
+      name,
+      email,
+      phone,
+      password,
+      role: userType || 'hostel_owner',
+      role_id: Number.isInteger(roleId) && roleId > 0 ? roleId : null,
+      business_id: 1,
+      branch_id: 1,
+      permissions,
+    });
+
+    if (!res || !res.success) {
+      const msg = res?.error || 'Could not create account.';
+      _fieldErr(errEl, msg);
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    await auditLog('USER_CREATED', `Created user: ${email} (${userType || 'hostel_owner'})`);
+    showToast('User account created.');
+    await ensureManagersLoaded(true);
+    setState({ modal: null, adminTab: 'managers' });
+  } catch (e) {
+    _fieldErr(errEl, 'Network error while creating account.');
+    if (btn) btn.disabled = false;
+  }
+}
+
+export async function doUpdateUserStatus(userId, status) {
+  if (!userId || !['active', 'suspended'].includes(status)) {
+    showToast('Invalid status change request.', 'error');
+    return;
+  }
+  const res = await updateUserStatus(userId, status);
+  if (!res || !res.success) {
+    showToast(res?.error || 'Failed to update user status.', 'error');
+    return;
+  }
+  await auditLog('OWNER_STATUS_CHANGED', `Set owner #${userId} to ${status}`);
+  showToast(`User ${status === 'active' ? 'activated' : 'suspended'}.`);
+  await ensureManagersLoaded(true);
+  setState({});
+}
+
+export async function ensureManagersLoaded(force = false) {
+  if (state.managersLoading) return;
+  if (!force && state.managersLoaded) return;
+
+  setState({ managersLoading: true });
+  try {
+    const users = await loadUsers('hostel_owner');
+    setState({
+      managers: Array.isArray(users) ? users : [],
+      managersLoading: false,
+      managersLoaded: true,
+    });
+  } catch (e) {
+    setState({ managersLoading: false, managersLoaded: true });
+    showToast('Failed to load managers from database.', 'error');
+  }
+}
+
+export async function ensureRolesLoaded(force = false) {
+  if (state.rolesLoading) return;
+  if (!force && state.rolesLoaded) return;
+  setState({ rolesLoading: true });
+  try {
+    const roles = await loadRoles();
+    setState({
+      roles: Array.isArray(roles) ? roles : [],
+      rolesLoading: false,
+      rolesLoaded: true,
+    });
+  } catch (e) {
+    setState({ rolesLoading: false, rolesLoaded: true });
+    showToast('Failed to load roles.', 'error');
+  }
+}
+
+export async function ensurePermissionsLoaded(force = false) {
+  if (state.permissionsLoading) return;
+  if (!force && state.permissionsLoaded) return;
+  setState({ permissionsLoading: true });
+  try {
+    const perms = await loadPermissions();
+    setState({
+      permissions: Array.isArray(perms) ? perms : [],
+      permissionsLoading: false,
+      permissionsLoaded: true,
+    });
+  } catch (e) {
+    setState({ permissionsLoading: false, permissionsLoaded: true });
+    showToast('Failed to load permissions.', 'error');
+  }
+}
+
+export async function ensureUsersLoaded(force = false) {
+  if (state.usersLoading) return;
+  if (!force && state.usersLoaded) return;
+  setState({ usersLoading: true });
+  try {
+    const users = await loadUsers('all');
+    setState({
+      users: Array.isArray(users) ? users : [],
+      usersLoading: false,
+      usersLoaded: true,
+    });
+  } catch (e) {
+    setState({ usersLoading: false, usersLoaded: true });
+    showToast('Failed to load users.', 'error');
+  }
+}
+
+export async function doAddRole() {
+  const name = sanitize(document.getElementById('roleName')?.value ?? '', 50);
+  if (!name) {
+    showToast('Role name is required.', 'error');
+    return;
+  }
+  const res = await createRole(name);
+  if (!res || !res.success) {
+    showToast(res?.error || 'Could not create role.', 'error');
+    return;
+  }
+  await auditLog('ROLE_CREATED', `Created role: ${name}`);
+  document.getElementById('roleName').value = '';
+  await ensureRolesLoaded(true);
+  showToast('Role created.');
+}
+
+export async function doAddPermission() {
+  const name = sanitize(document.getElementById('permName')?.value ?? '', 50);
+  if (!name) {
+    showToast('Permission name is required.', 'error');
+    return;
+  }
+  const res = await createPermission(name);
+  if (!res || !res.success) {
+    showToast(res?.error || 'Could not create permission.', 'error');
+    return;
+  }
+  await auditLog('PERMISSION_CREATED', `Created permission: ${name}`);
+  document.getElementById('permName').value = '';
+  await ensurePermissionsLoaded(true);
+  showToast('Permission created.');
+}
+
+export async function doSeedPermissions() {
+  const res = await seedDefaultPermissions(1, 1);
+  if (!res || !res.success) {
+    showToast(res?.error || 'Failed to seed permissions.', 'error');
+    return;
+  }
+  await auditLog('PERMISSIONS_SEEDED', `Seeded default permissions. Added: ${res.added ?? 0}`);
+  await ensurePermissionsLoaded(true);
+  showToast(`Permissions ready. Added ${res.added ?? 0}, skipped ${res.skipped_existing ?? 0}.`);
+}
+
+export async function doAssignUserAccess(userId) {
+  const roleIdRaw = document.getElementById(`uRole_${userId}`)?.value ?? '';
+  const userType = document.getElementById(`uType_${userId}`)?.value ?? 'student';
+  const permMap = {};
+  for (const p of (state.permissions || [])) {
+    const key = `uPerm_${userId}_${p.id}`;
+    permMap[p.name] = !!document.getElementById(key)?.checked;
+  }
+  const role_id = roleIdRaw ? parseInt(roleIdRaw, 10) : null;
+  const res = await updateUserAccess(userId, { role_id, user_type: userType, permissions: permMap });
+  if (!res || !res.success) {
+    showToast(res?.error || 'Failed to assign access.', 'error');
+    return;
+  }
+  await auditLog('USER_ACCESS_UPDATED', `Updated role/permissions for user #${userId}`);
+  await ensureUsersLoaded(true);
+  await ensureManagersLoaded(true);
+  showToast('User access updated.');
+}
+
+export async function doAssignHostelManager(hostelId) {
+  if (!(await ensureLiveAccessSync())) return;
+  if (state.userRole !== 'admin') {
+    showToast('Only admin can assign hostel managers.', 'error');
+    return;
+  }
+  const raw = document.getElementById(`hostelOwner_${hostelId}`)?.value ?? '';
+  const ownerId = parseInt(raw, 10);
+  if (!Number.isInteger(ownerId) || ownerId <= 0) {
+    showToast('Select a manager first.', 'error');
+    return;
+  }
+
+  const res = await assignHostelOwner(hostelId, ownerId);
+  if (!res || !res.success) {
+    showToast(res?.error || 'Failed to assign manager.', 'error');
+    return;
+  }
+
+  const hostel = hostels.find(h => Number(h.id) === Number(hostelId));
+  if (hostel) hostel.owner_id = ownerId;
+  await auditLog('HOSTEL_OWNER_ASSIGNED', `Assigned hostel #${hostelId} to manager #${ownerId}`);
+  setState({});
+  showToast('Hostel assigned to manager.');
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -117,6 +429,8 @@ function _validateHostelForm(f) {
 }
 
 export async function doAddHostel() {
+  if (!(await ensureLiveAccessSync())) return;
+  if (!hasPermission('create_hostel')) { showToast('You do not have permission to create hostels.', 'error'); return; }
   const f = _readHostelForm();
   if (!_validateHostelForm(f)) return;
 
@@ -141,6 +455,9 @@ export async function doAddHostel() {
 }
 
 export async function doEditHostel() {
+  if (!(await ensureLiveAccessSync())) return;
+  const targetId = parseInt(document.getElementById('hEditId')?.value ?? '0', 10);
+  if (!hasPermission('edit_hostel') || !canManageHostel(targetId)) { showToast('You cannot edit this hostel.', 'error'); return; }
   const f = _readHostelForm();
   if (!_validateHostelForm(f)) return;
 
@@ -166,7 +483,9 @@ export async function doEditHostel() {
 }
 
 export async function doDelHostel() {
+  if (!(await ensureLiveAccessSync())) return;
   const id = state.modalData.hostelId;
+  if (!hasPermission('delete_hostel') || !canManageHostel(id)) { showToast('You cannot delete this hostel.', 'error'); return; }
   const h  = getHostel(id);
   if (!h) return;
   const idx = hostels.indexOf(h);
@@ -205,9 +524,12 @@ function _validateRoomForm(f) {
 }
 
 export async function doAddRoom() {
+  if (!(await ensureLiveAccessSync())) return;
+  if (!hasPermission('create_room') && !hasPermission('manage_rooms')) { showToast('You do not have permission to add rooms.', 'error'); return; }
   const f = _readRoomForm();
   if (!_validateRoomForm(f)) return;
   const h = getHostel(state.modalData.hostelId);
+  if (!canManageHostel(h?.id)) { showToast('You cannot manage rooms for this hostel.', 'error'); return; }
   if (!h) { showToast('Hostel not found.', 'error'); return; }
   if (h.rooms.some(r => r.number === f.num)) { _fieldErr('rErr', `Room ${f.num} already exists in this hostel.`); return; }
   h.rooms.push({ id: makeId(), number: f.num, type: f.type, floor: f.floor, price: f.price, confirmationFee: f.fee, status: 'available' });
@@ -218,9 +540,12 @@ export async function doAddRoom() {
 }
 
 export async function doEditRoom() {
+  if (!(await ensureLiveAccessSync())) return;
+  if (!hasPermission('edit_room') && !hasPermission('manage_rooms')) { showToast('You do not have permission to edit rooms.', 'error'); return; }
   const f    = _readRoomForm();
   if (!_validateRoomForm(f)) return;
   const h    = getHostel(state.modalData.hostelId);
+  if (!canManageHostel(h?.id)) { showToast('You cannot manage rooms for this hostel.', 'error'); return; }
   const rIdx = h?.rooms.findIndex(x => x.id === state.modalData.roomId) ?? -1;
   if (!h || rIdx === -1) { showToast('Room not found.', 'error'); return; }
   if (h.rooms.some((r, i) => r.number === f.num && i !== rIdx)) { _fieldErr('rErr', `Room ${f.num} already exists.`); return; }
@@ -233,7 +558,10 @@ export async function doEditRoom() {
 }
 
 export async function doDelRoom() {
+  if (!(await ensureLiveAccessSync())) return;
   const h = getHostel(state.modalData.hostelId);
+  if (!hasPermission('delete_room') && !hasPermission('manage_rooms')) { showToast('You do not have permission to delete rooms.', 'error'); return; }
+  if (!canManageHostel(h?.id)) { showToast('You cannot manage rooms for this hostel.', 'error'); return; }
   const r = h?.rooms.find(x => x.id === state.modalData.roomId);
   if (!h || !r) return;
   h.rooms = h.rooms.filter(x => x.id !== r.id);
@@ -245,6 +573,9 @@ export async function doDelRoom() {
 }
 
 export async function releaseRoom(hostelId, roomId) {
+  if (!(await ensureLiveAccessSync())) return;
+  if (!hasPermission('release_room') && !hasPermission('manage_rooms')) { showToast('You do not have permission to release rooms.', 'error'); return; }
+  if (!canManageHostel(hostelId)) { showToast('You cannot manage this hostel.', 'error'); return; }
   const h = getHostel(hostelId);
   const r = h?.rooms.find(x => x.id === roomId);
   if (!h || !r) return;
@@ -278,7 +609,7 @@ export function bStep1() {
   if (!name)                      { _fieldErr('s1e', 'Full name is required.'); return; }
   if (!validate('name', name))    { _fieldErr('s1e', 'Name: letters and spaces only (2–80 chars).'); return; }
   if (!reg)                       { _fieldErr('s1e', 'Registration number is required.'); return; }
-  if (!validate('regNo', reg))    { _fieldErr('s1e', 'Invalid format. Use: YYYY/U/MMU/COURSE/NNNNNNN'); return; }
+  if (!validate('regNo', reg))    { _fieldErr('s1e', 'Invalid format. Use: YYYY/U/MMU/COURSE/STUDENTNUMBER'); return; }
   if (!year)                      { _fieldErr('s1e', 'Please select your year of study.'); return; }
 
   const dup = bookings.find(b => b.regNo.toUpperCase() === reg && b.hostelId === state.selH);
@@ -330,9 +661,9 @@ export async function confirmBooking() {
   }
 
   const btn = document.getElementById('cbtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Processing…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
 
-  // Temporarily mark as pending to prevent double-booking while paying
+  // Mark as pending so manager/admin can review and confirm from dashboard
   h.rooms[rIdx].status   = 'pending';
   h.rooms[rIdx].bookedBy = state.bData.studentName;
   h.rooms[rIdx].regNo    = state.bData.regNo;
@@ -355,105 +686,43 @@ export async function confirmBooking() {
   // Expose bookings globally so slip modal can access them
   window.__mmuBookings__ = bookings;
 
-  // Persist the lock
+  // Persist pending booking request
   await saveData();
+  countBooking();
+  await auditLog('BOOKING_CREATED',
+    `Pending booking request for room ${room.number} in ${h.name} by ${booking.studentName} (${booking.regNo})`,
+    { ref: bookingId }
+  );
 
-  const amountToCharge = room.confirmationFee || room.price;
-
-  const _revertLock = async () => {
-    if (h.rooms[rIdx].status === 'pending') {
-      h.rooms[rIdx].status = 'available';
-      delete h.rooms[rIdx].bookedBy;
-      delete h.rooms[rIdx].regNo;
-      const bIdx = bookings.findIndex(x => x.id === bookingId);
-      if (bIdx !== -1) bookings.splice(bIdx, 1);
-      window.__mmuBookings__ = bookings;
-      await saveData();
-    }
-  };
-
-  const _onSuccess = async (txRef) => {
-    countBooking();
-    h.rooms[rIdx].status = 'booked';
-    const b = bookings.find(x => x.id === bookingId);
-    if (b) b.status = 'confirmed';
-
-    window.__mmuBookings__ = bookings;
-    await saveData();
-    await auditLog('BOOKING_CREATED',
-      `Room ${room.number} in ${h.name} booked by ${booking.studentName} (${booking.regNo}) via Direct Charge API`,
-      { ref: bookingId, txRef }
-    );
-
-    setState({
-      modal:      'success',
-      successMsg: `Payment successful! Room ${room.number} in ${h.name} is confirmed for ${state.bData.studentName}. Ref: #${bookingId}`,
-      bStep:      1,
-      bData:      {},
-    });
-  };
-
-  const payload = {
-    amount: amountToCharge,
-    phone: state.bData.phone,
-    email: state.bData.email || 'student@mmu.ac.ug',
-    tx_ref: bookingId,
-    fullname: state.bData.studentName,
-    network: state.bData.network // MTN or AIRTEL
-  };
-
-  try {
-    const res = await fetch('./new-hostel/api.php/pay', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    
-    const json = await res.json();
-    
-    if (json.status === 'success' || json.status === 'pending') {
-      if (btn) btn.textContent = 'Pushing PIN prompt to phone...';
-      showToast('A payment prompt has been sent to your phone. Please enter your Mobile Money PIN.', 'success');
-      
-      // Polling loop
-      let ticks = 0;
-      const poll = setInterval(async () => {
-        if (++ticks > 24) { // Timeout after 2 mins (5s * 24)
-          clearInterval(poll);
-          await _revertLock();
-          if (btn) { btn.disabled = false; btn.textContent = `💳 Pay ${formatPrice(amountToCharge)} Now`; }
-          showToast('Payment timed out. Please try again.', 'error');
-          return;
-        }
-
-        try {
-          const vRes = await fetch(`./new-hostel/api.php/verify-payment?tx_ref=${bookingId}`);
-          const vJson = await vRes.json();
-          if (vJson.status === 'successful') {
-            clearInterval(poll);
-            await _onSuccess(vJson.transaction_id || '');
-          } else if (vJson.status === 'failed') {
-            clearInterval(poll);
-            await _revertLock();
-            if (btn) { btn.disabled = false; btn.textContent = `💳 Pay ${formatPrice(amountToCharge)} Now`; }
-            showToast('Payment failed or was cancelled by user.', 'error');
-          }
-        } catch(e) {} // ignore interim fetch errors
-      }, 5000);
-      
-    } else {
-      await _revertLock();
-      if (btn) { btn.disabled = false; btn.textContent = `💳 Pay ${formatPrice(amountToCharge)} Now`; }
-      showToast(json.message || 'Failed to initiate payment.', 'error');
-    }
-  } catch(e) {
-    await _revertLock();
-    if (btn) { btn.disabled = false; btn.textContent = `💳 Pay ${formatPrice(amountToCharge)} Now`; }
-    showToast('Network error while initiating payment.', 'error');
+  // Notify assigned hostel manager on WhatsApp with booking details.
+  const managerPhone = (h.managerPhone || '').replace(/\D/g, '').replace(/^0/, '256');
+  if (managerPhone) {
+    const waText =
+      `New Hostel Booking Request%0A` +
+      `Ref: #${bookingId}%0A` +
+      `Hostel: ${encodeURIComponent(h.name)}%0A` +
+      `Room: ${encodeURIComponent(room.number)} (${encodeURIComponent(room.type || '')})%0A` +
+      `Student: ${encodeURIComponent(booking.studentName)}%0A` +
+      `Reg No: ${encodeURIComponent(booking.regNo)}%0A` +
+      `Phone: ${encodeURIComponent(booking.phone || '')}%0A` +
+      `Course: ${encodeURIComponent(booking.course || '')}%0A` +
+      `Semester: ${encodeURIComponent(booking.semester || '')}%0A` +
+      `Status: pending`;
+    window.open(`https://wa.me/${managerPhone}?text=${waText}`, '_blank', 'noopener');
   }
+
+  setState({
+    modal:      'success',
+    successMsg: `Booking request submitted for ${h.name} Room ${room.number}. Ref: #${bookingId}. It is now pending manager/admin confirmation.`,
+    bStep:      1,
+    bData:      {},
+  });
 }
 
 export async function confirmRoomPayment(hostelId, roomId) {
+  if (!(await ensureLiveAccessSync())) return;
+  if (!hasPermission('confirm_room_payment') && !hasPermission('manage_bookings')) { showToast('You do not have permission to confirm payments.', 'error'); return; }
+  if (!canManageHostel(hostelId)) { showToast('You cannot manage this hostel.', 'error'); return; }
   const h = getHostel(hostelId);
   const r = h?.rooms.find(x => x.id === roomId);
   if (!h || !r) return;
@@ -466,9 +735,63 @@ export async function confirmRoomPayment(hostelId, roomId) {
 
   window.__mmuBookings__ = bookings;
   await saveData();
+  let confirmMsg = `Booking confirmed for Room ${r.number}.`;
+  if (b?.email) {
+    const notify = await sendApprovedBookingCredentials({
+      email: b.email,
+      studentName: b.studentName || '',
+      regNo: b.regNo || '',
+      hostelName: h.name || '',
+      roomNumber: r.number || '',
+    });
+    if (notify?.success) {
+      confirmMsg = (notify.email_sent
+        ? `Booking approved. Credentials sent to ${b.email}.`
+        : `Booking approved. Account ready for ${b.email} (email sending unavailable on server).`
+      );
+    }
+  }
   await auditLog('PAYMENT_CONFIRMED', `Admin confirmed payment for room ${r.number} in ${h.name}`);
   setState({});
-  showToast(`Payment confirmed for Room ${r.number}.`);
+  showToast(confirmMsg);
+}
+
+export async function resendStudentCredentials(bookingId) {
+  if (!(await ensureLiveAccessSync())) return;
+  if (!hasPermission('confirm_room_payment') && !hasPermission('manage_bookings')) {
+    showToast('You do not have permission to resend credentials.', 'error');
+    return;
+  }
+
+  const b = bookings.find(x => String(x.id) === String(bookingId));
+  if (!b) { showToast('Booking not found.', 'error'); return; }
+  if (b.status !== 'confirmed') {
+    showToast('Only confirmed bookings can resend credentials.', 'warn');
+    return;
+  }
+  if (!b.email) {
+    showToast('Student email missing on booking.', 'error');
+    return;
+  }
+
+  const h = getHostel(b.hostelId);
+  const r = h?.rooms.find(x => x.id === b.roomId);
+  const notify = await sendApprovedBookingCredentials({
+    email: b.email,
+    studentName: b.studentName || '',
+    regNo: b.regNo || '',
+    hostelName: h?.name || '',
+    roomNumber: r?.number || '',
+  });
+  if (!notify?.success) {
+    showToast(notify?.error || 'Failed to resend credentials.', 'error');
+    return;
+  }
+  showToast(notify.email_sent
+    ? `Credentials resent to ${b.email}.`
+    : `Account refreshed for ${b.email}, but email sending is unavailable on server.`
+  );
+  await auditLog('STUDENT_CREDENTIALS_RESENT', `Credentials resent for booking #${b.id} to ${b.email}`);
 }
 
 /* Student booking lookup */
@@ -482,7 +805,7 @@ export function lookupBooking() {
     return;
   }
   if (!validate('regNo', raw)) {
-    resEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm">⚠️ Invalid format. Use: YYYY/U/MMU/COURSE/NNNNNNN</div>`;
+    resEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm">⚠️ Invalid format. Use: YYYY/U/MMU/COURSE/STUDENTNUMBER</div>`;
     return;
   }
 

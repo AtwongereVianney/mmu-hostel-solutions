@@ -13,26 +13,24 @@
 import { state }                      from '../state.js';
 import { hostels, bookings }          from '../state.js';
 import {
-  e, formatPrice, roomStats, allStats, getHostel,
+  e, formatPrice, roomStats, getHostel,
   mapEmbedUrl, mapLinkUrl, hostelCoverHtml, hostelThumbnailHtml,
   bookingCardHtml, starRatingHtml, availabilityBadgeHtml, skeletonCardHtml,
 } from '../utils.js';
 import { renderHostelCard }           from '../components/hostelCard.js';
 import { isAuthenticated, getAuditLog, isLoginLocked, getBruteForceState } from '../security.js';
-import { PRICE_RANGE, SEMESTERS }     from '../data.js';
+import { SEMESTERS }     from '../data.js';
 
 /* ══════════════════════════════════════════════════════════════════════════
    HOSTELS LIST
 ══════════════════════════════════════════════════════════════════════════ */
 export function renderHostels() {
-  const { fGender, fSearch, fPriceMin, fPriceMax, fSemester } = state;
+  const { fGender, fSearch, fSemester } = state;
 
   const filtered = hostels.filter(h => {
     const gOk = fGender === 'All' || h.gender === fGender || h.gender === 'Mixed';
     const qOk = !fSearch || h.name.toLowerCase().includes(fSearch.toLowerCase());
-    // Price filter: at least one room falls within the range
-    const pOk = h.rooms.length === 0 || h.rooms.some(r => r.price >= fPriceMin && r.price <= fPriceMax);
-    return gOk && qOk && pOk;
+    return gOk && qOk;
   });
 
   return `
@@ -59,38 +57,8 @@ export function renderHostels() {
         </select>
       </div>
       <div>
-        <button onclick="App.setState({ fGender:'All', fSearch:'', fPriceMin:${PRICE_RANGE.min}, fPriceMax:${PRICE_RANGE.max}, fSemester:'All' })"
+        <button onclick="App.setState({ fGender:'All', fSearch:'', fSemester:'All' })"
                 class="btn-out w-full">↺ Reset Filters</button>
-      </div>
-    </div>
-
-    <!-- Price range slider -->
-    <div class="border-t border-gray-100 pt-4">
-      <div class="flex items-center justify-between mb-2">
-        <label class="lbl">Price Range per Semester</label>
-        <span class="text-xs font-bold text-gold" id="priceRangeLabel">
-          UGX ${Number(fPriceMin).toLocaleString()} – UGX ${Number(fPriceMax).toLocaleString()}
-        </span>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <div class="text-xs text-gray-400 mb-1">Min</div>
-          <input type="range" class="range-inp"
-                 min="${PRICE_RANGE.min}" max="${PRICE_RANGE.max}" step="50000"
-                 value="${fPriceMin}"
-                 oninput="App.setState({ fPriceMin: +this.value }); document.getElementById('priceRangeLabel').textContent = 'UGX ' + (+this.value).toLocaleString() + ' – UGX ' + ${fPriceMax}.toLocaleString();"/>
-        </div>
-        <div>
-          <div class="text-xs text-gray-400 mb-1">Max</div>
-          <input type="range" class="range-inp"
-                 min="${PRICE_RANGE.min}" max="${PRICE_RANGE.max}" step="50000"
-                 value="${fPriceMax}"
-                 oninput="App.setState({ fPriceMax: +this.value }); document.getElementById('priceRangeLabel').textContent = 'UGX ' + ${fPriceMin}.toLocaleString() + ' – UGX ' + (+this.value).toLocaleString();"/>
-        </div>
-      </div>
-      <div class="flex justify-between text-xs text-gray-400 mt-1">
-        <span>UGX ${Number(PRICE_RANGE.min).toLocaleString()}</span>
-        <span>UGX ${Number(PRICE_RANGE.max).toLocaleString()}</span>
       </div>
     </div>
   </div>
@@ -98,7 +66,7 @@ export function renderHostels() {
   <div class="grid md:grid-cols-3 gap-5">
     ${filtered.length
       ? filtered.map(renderHostelCard).join('')
-      : '<div class="col-span-3 text-center py-12 text-gray-400">No hostels match your search. <button onclick="App.setState({ fGender:\'All\', fSearch:\'\', fPriceMin:'+PRICE_RANGE.min+', fPriceMax:'+PRICE_RANGE.max+' })" class="text-g underline ml-1">Reset filters</button></div>'}
+      : '<div class="col-span-3 text-center py-12 text-gray-400">No hostels match your search. <button onclick="App.setState({ fGender:\'All\', fSearch:\'\', fSemester:\'All\' })" class="text-g underline ml-1">Reset filters</button></div>'}
   </div>`;
 }
 
@@ -252,14 +220,18 @@ export function renderHostelDetail() {
 export function renderMyBookings() {
   const tab       = state.bookingsTab ?? 'search';
   const shortlist = (state.shortlist ?? []).map(id => hostels.find(h => h.id === id)).filter(Boolean);
+  const isStudentLoggedIn = state.userRole === 'student' && !!state.userEmail;
+  const studentBookings = isStudentLoggedIn
+    ? bookings.filter(b => (b.email || '').toLowerCase() === state.userEmail.toLowerCase())
+    : [];
 
   return `
-  <h2 class="text-g text-2xl mb-2">My Bookings</h2>
-  <p class="text-gray-500 text-sm mb-5">Track your reservations and saved hostels.</p>
+  <h2 class="text-g text-2xl mb-2">${isStudentLoggedIn ? 'Student Dashboard' : 'My Bookings'}</h2>
+  <p class="text-gray-500 text-sm mb-5">${isStudentLoggedIn ? 'Welcome. Track your booking status and hostel details.' : 'Track your reservations and saved hostels.'}</p>
 
   <!-- Tab switcher -->
   <div class="flex gap-2 mb-5">
-    <button class="tab-btn ${tab==='search'    ? 'active' : ''}" onclick="App.setState({ bookingsTab: 'search' })">🔍 Lookup Booking</button>
+    <button class="tab-btn ${tab==='search'    ? 'active' : ''}" onclick="App.setState({ bookingsTab: 'search' })">${isStudentLoggedIn ? '📌 My Booking Status' : '🔍 Lookup Booking'}</button>
     <button class="tab-btn ${tab==='shortlist' ? 'active' : ''}" onclick="App.setState({ bookingsTab: 'shortlist' })">
       ❤️ My Shortlist
       ${shortlist.length ? `<span class="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5">${shortlist.length}</span>` : ''}
@@ -267,21 +239,29 @@ export function renderMyBookings() {
   </div>
 
   ${tab === 'search' ? `
+  ${isStudentLoggedIn ? `
+  <div class="bg-white rounded-xl shadow-card p-5 mb-5">
+    ${studentBookings.length
+      ? `<h3 class="text-g text-lg mb-3">My Bookings (${studentBookings.length})</h3><div class="space-y-3">${studentBookings.map(bookingCardHtml).join('')}</div>`
+      : '<p class="text-gray-400 text-sm">No bookings found for your account yet.</p>'}
+  </div>
+  ` : `
   <!-- Booking Lookup -->
   <div class="bg-white rounded-xl shadow-card p-5 mb-5 max-w-md">
     <label class="lbl">Student Registration Number</label>
     <div class="flex gap-2">
-      <input id="regIn" type="text" maxlength="40" placeholder="2026/U/MMU/CCS/0000001" class="inp flex-1"
+      <input id="regIn" type="text" maxlength="40" placeholder="2026/U/MMU/CCS/STUDENTNUMBER" class="inp flex-1"
              onkeydown="if(event.key==='Enter') App.lookupBooking()"/>
       <button onclick="App.lookupBooking()" class="btn-g">Search</button>
     </div>
-    <div class="text-xs text-gray-400 mt-1">Format: YYYY/U/MMU/COURSE/NNNNNNN</div>
+    <div class="text-xs text-gray-400 mt-1">Format: YYYY/U/MMU/COURSE/STUDENTNUMBER</div>
   </div>
   <div id="bkResult"></div>
 
   ${bookings.length ? `
   <h3 class="text-g text-lg mb-3 mt-6">All Bookings (${bookings.length})</h3>
   <div class="space-y-3">${bookings.map(bookingCardHtml).join('')}</div>` : ''}
+  `}
   ` : ''}
 
   ${tab === 'shortlist' ? `
@@ -329,18 +309,49 @@ export function renderAdmin() {
     return '<div class="text-center py-12 text-gray-400">Redirecting to login…</div>';
   }
 
-  const s = allStats();
+  const isSystemAdmin = state.userRole === 'admin';
+  const perms = state.userPermissions || {};
+  const can = (p) => isSystemAdmin || !!perms[p] || !!perms.system_admin;
+  const visibleHostels = isSystemAdmin
+    ? hostels
+    : hostels.filter(h => Number(h.owner_id) === Number(state.userId));
+  const visibleBookings = isSystemAdmin
+    ? bookings
+    : bookings.filter(b => visibleHostels.some(h => Number(h.id) === Number(b.hostelId)));
+  const s = {
+    t: visibleHostels.reduce((n, h) => n + (h.rooms?.length || 0), 0),
+    a: visibleHostels.reduce((n, h) => n + ((h.rooms || []).filter(r => r.status === 'available').length), 0),
+    b: visibleHostels.reduce((n, h) => n + ((h.rooms || []).filter(r => r.status === 'booked' || r.status === 'pending').length), 0),
+  };
   const tab = state.adminTab ?? 'hostels';
+  const who = state.adminUser || state.userRole || 'admin';
+  if (tab === 'managers' && state.adminMode && !state.managersLoaded && !state.managersLoading) {
+    setTimeout(() => window.App?.ensureManagersLoaded?.(), 0);
+  }
+  if (tab === 'hostels' && state.adminMode && !state.managersLoaded && !state.managersLoading) {
+    setTimeout(() => window.App?.ensureManagersLoaded?.(), 0);
+  }
+  if (tab === 'roles' && state.adminMode && !state.rolesLoaded && !state.rolesLoading) {
+    setTimeout(() => window.App?.ensureRolesLoaded?.(), 0);
+  }
+  if (tab === 'permissions' && state.adminMode && !state.permissionsLoaded && !state.permissionsLoading) {
+    setTimeout(() => window.App?.ensurePermissionsLoaded?.(), 0);
+  }
+  if (tab === 'users' && state.adminMode && !state.usersLoaded && !state.usersLoading) {
+    setTimeout(() => window.App?.ensureUsersLoaded?.(), 0);
+    setTimeout(() => window.App?.ensureRolesLoaded?.(), 0);
+    setTimeout(() => window.App?.ensurePermissionsLoaded?.(), 0);
+  }
 
   return `
   <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
     <div>
       <h2 class="text-g text-2xl">Admin Panel</h2>
-      <div class="text-xs text-gray-500">Logged in as <b>${e(state.userRole)}</b> · Session active</div>
+      <div class="text-xs text-gray-500">Logged in as <b>${e(who)}</b> · Session active</div>
     </div>
     <div class="flex gap-2">
-      ${state.userRole === 'super_admin' ? `<button onclick="App.openModal('addManager', {})" class="btn-out text-sm">+ Add Manager</button>` : ''}
-      <button onclick="App.requireAdmin() && App.openModal('addHostel', {})" class="btn-g">+ Add Hostel</button>
+      ${state.adminMode && isSystemAdmin ? `<button onclick="App.openModal('addManager', {})" class="btn-out text-sm">+ Add Manager</button>` : ''}
+      ${can('create_hostel') ? `<button onclick="App.requireAdmin() && App.openModal('addHostel', {})" class="btn-g">+ Add Hostel</button>` : ''}
     </div>
   </div>
 
@@ -348,14 +359,18 @@ export function renderAdmin() {
   <div class="flex gap-2 mb-6">
     <button class="tab-btn ${tab==='hostels'  ? 'active' : ''}" onclick="App.setState({ adminTab: 'hostels' })">🏢 Hostels</button>
     <button class="tab-btn ${tab==='bookings' ? 'active' : ''}" onclick="App.setState({ adminTab: 'bookings' })">📅 Bookings</button>
-    ${state.userRole === 'super_admin' ? `<button class="tab-btn ${tab==='managers' ? 'active' : ''}" onclick="App.setState({ adminTab: 'managers' })">👥 Managers</button>` : ''}
-    <button class="tab-btn" onclick="App.go('security')">🔐 Security</button>
+    ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='managers' ? 'active' : ''}" onclick="App.setState({ adminTab: 'managers' }); App.ensureManagersLoaded();">👥 Managers</button>` : ''}
+    ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='roles' ? 'active' : ''}" onclick="App.setState({ adminTab: 'roles' }); App.ensureRolesLoaded();">🪪 Roles</button>` : ''}
+    ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='permissions' ? 'active' : ''}" onclick="App.setState({ adminTab: 'permissions' }); App.ensurePermissionsLoaded();">🛡 Permissions</button>` : ''}
+    ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='users' ? 'active' : ''}" onclick="App.setState({ adminTab: 'users' }); App.ensureUsersLoaded();">👤 Users</button>` : ''}
+    ${isSystemAdmin ? `<button class="tab-btn" onclick="App.openModal('addManager', {})">➕ Add Users</button>` : ''}
+    ${isSystemAdmin ? `<button class="tab-btn" onclick="App.go('security')">🔐 Security</button>` : ''}
   </div>
 
   ${tab === 'hostels' ? `
   <!-- Stats -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-    ${[['Hostels',hostels.length,'🏢'],['Total Rooms',s.t,'🚪'],['Available',s.a,'✅'],['Booked',s.b,'🔴']].map(([l,v,ic])=>
+    ${[['Hostels',visibleHostels.length,'🏢'],['Total Rooms',s.t,'🚪'],['Available',s.a,'✅'],['Booked',s.b,'🔴']].map(([l,v,ic])=>
       `<div class="bg-white rounded-xl shadow-card p-4 text-center" style="border-top:3px solid var(--gold)">
         <div class="text-2xl mb-1">${ic}</div>
         <div class="text-2xl font-bold text-g">${v}</div>
@@ -365,8 +380,8 @@ export function renderAdmin() {
 
   <!-- Hostels Table -->
   <div class="space-y-4 mb-6">
-    ${hostels.length === 0 ? '<div class="text-center py-10 text-gray-400 bg-white rounded-xl shadow-card">No hostels assigned to you yet.</div>' : ''}
-    ${hostels.map(h => {
+    ${visibleHostels.length === 0 ? '<div class="text-center py-10 text-gray-400 bg-white rounded-xl shadow-card">No hostels assigned to you yet.</div>' : ''}
+    ${visibleHostels.map(h => {
       const hs = roomStats(h);
       return `
       <div class="bg-white rounded-xl shadow-card overflow-hidden">
@@ -389,12 +404,22 @@ export function renderAdmin() {
             </div>
           </div>
           <div class="action-row">
+            ${isSystemAdmin ? `
+              <select id="hostelOwner_${h.id}" class="inp" style="max-width:12rem;padding:.25rem .4rem;font-size:.75rem;">
+                <option value="">Assign manager</option>
+                ${(state.managers || [])
+                  .filter(m => m.status === 'active')
+                  .map(m => `<option value="${m.id}"${Number(h.owner_id)===Number(m.id)?' selected':''}>${e(m.name)}</option>`)
+                  .join('')}
+              </select>
+              <button onclick="App.requireAdmin() && App.doAssignHostelManager(${h.id})" class="btn-out btn-sm" style="border-color:#0f766e;color:#0f766e">Assign</button>
+            ` : ''}
             <span class="badge-ok  text-xs px-2 py-0.5 rounded-full font-semibold">${hs.a} avail</span>
             <span class="badge-err text-xs px-2 py-0.5 rounded-full font-semibold">${hs.b} booked</span>
             <button onclick="App.requireAdmin() && App.openModal('viewHostel',  { hostelId:${h.id} })" class="btn-out btn-sm">👁 View</button>
-            <button onclick="App.requireAdmin() && App.openModal('editHostel',  { hostelId:${h.id} })" class="btn-out btn-sm" style="border-color:var(--g);color:var(--g)">✏️ Edit</button>
-            <button onclick="App.requireAdmin() && App.openModal('addRoom',     { hostelId:${h.id} })" class="btn-out btn-sm" style="border-color:#2563eb;color:#2563eb">+ Room</button>
-            ${state.userRole === 'super_admin' ? `<button onclick="App.requireAdmin() && App.openModal('delHostelConf',{ hostelId:${h.id} })" class="btn-red btn-sm">🗑 Delete</button>` : ''}
+            ${can('edit_hostel') ? `<button onclick="App.requireAdmin() && App.openModal('editHostel',  { hostelId:${h.id} })" class="btn-out btn-sm" style="border-color:var(--g);color:var(--g)">✏️ Edit</button>` : ''}
+            ${can('create_room') || can('manage_rooms') ? `<button onclick="App.requireAdmin() && App.openModal('addRoom',     { hostelId:${h.id} })" class="btn-out btn-sm" style="border-color:#2563eb;color:#2563eb">+ Room</button>` : ''}
+            ${can('delete_hostel') ? `<button onclick="App.requireAdmin() && App.openModal('delHostelConf',{ hostelId:${h.id} })" class="btn-red btn-sm">🗑 Delete</button>` : ''}
           </div>
         </div>
         <div class="overflow-x-auto">
@@ -415,12 +440,12 @@ export function renderAdmin() {
                 <td class="text-xs text-gray-500">${e(r.bookedBy||'—')}</td>
                 <td>
                   <div class="action-row">
-                    <button onclick="App.requireAdmin() && App.openModal('editRoom', { hostelId:${h.id}, roomId:${r.id} })" class="text-xs text-g font-semibold hover:underline">✏️ Edit</button>
+                    ${(can('edit_room') || can('manage_rooms')) ? `<button onclick="App.requireAdmin() && App.openModal('editRoom', { hostelId:${h.id}, roomId:${r.id} })" class="text-xs text-g font-semibold hover:underline">✏️ Edit</button>` : ''}
                     ${r.status === 'booked' || r.status === 'pending'
-                      ? `<button onclick="App.requireAdmin() && App.releaseRoom(${h.id},${r.id})" class="text-xs text-blue-600 font-semibold hover:underline">↩ Release</button>`
-                      : `<button onclick="App.requireAdmin() && App.openModal('delRoomConf', { hostelId:${h.id}, roomId:${r.id} })" class="text-xs text-red-500 font-semibold hover:underline">🗑 Del</button>`}
+                      ? ((can('release_room') || can('manage_rooms')) ? `<button onclick="App.requireAdmin() && App.releaseRoom(${h.id},${r.id})" class="text-xs text-blue-600 font-semibold hover:underline">↩ Release</button>` : '')
+                      : ((can('delete_room') || can('manage_rooms')) ? `<button onclick="App.requireAdmin() && App.openModal('delRoomConf', { hostelId:${h.id}, roomId:${r.id} })" class="text-xs text-red-500 font-semibold hover:underline">🗑 Del</button>` : '')}
                     ${r.status === 'pending'
-                      ? `<button onclick="App.requireAdmin() && App.confirmRoomPayment(${h.id},${r.id})" class="text-xs text-green-600 font-semibold hover:underline">✅ Confirm Pay</button>`
+                      ? ((can('confirm_room_payment') || can('manage_bookings')) ? `<button onclick="App.requireAdmin() && App.confirmRoomPayment(${h.id},${r.id})" class="text-xs text-green-600 font-semibold hover:underline">✅ Confirm Pay</button>` : '')
                       : ''}
                   </div>
                 </td>
@@ -434,18 +459,18 @@ export function renderAdmin() {
   ` : ''}
 
   <!-- Bookings Tab -->
-  ${tab === 'bookings' ? `
+  ${tab === 'bookings' && (isSystemAdmin || can('view_bookings')) ? `
   <div class="bg-white rounded-xl shadow-card p-5">
-    <h3 class="text-g text-lg mb-3">All Bookings (${bookings.length})</h3>
-    ${bookings.length ? `
+    <h3 class="text-g text-lg mb-3">All Bookings (${visibleBookings.length})</h3>
+    ${visibleBookings.length ? `
     <div class="overflow-x-auto">
       <table class="w-full">
         <thead class="tbl-hd"><tr>
           <th>Ref</th><th>Student</th><th>Reg No</th><th>Course</th>
-          <th>Hostel / Room</th><th>Amount</th><th>Status</th><th>Date</th>
+          <th>Hostel / Room</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th>
         </tr></thead>
         <tbody>
-          ${bookings.map(b => {
+          ${visibleBookings.map(b => {
             const bh = getHostel(b.hostelId);
             const br = bh?.rooms.find(r => r.id === b.roomId);
             return `<tr class="tbl-row">
@@ -457,6 +482,11 @@ export function renderAdmin() {
               <td class="font-semibold text-gold text-xs">${br ? formatPrice(br.price) : '?'}</td>
               <td><span class="text-xs px-2 py-0.5 rounded-full font-semibold ${b.status==='confirmed'?'badge-ok':'badge-warn'}">${b.status}</span></td>
               <td class="text-xs text-gray-400">${e(b.date)}</td>
+              <td>
+                ${b.status === 'confirmed' && b.email && (isSystemAdmin || can('manage_bookings') || can('confirm_room_payment'))
+                  ? `<button onclick="App.requireAdmin() && App.resendStudentCredentials('${e(b.id)}')" class="text-xs text-blue-600 font-semibold hover:underline">✉ Resend Credentials</button>`
+                  : '<span class="text-xs text-gray-300">—</span>'}
+              </td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -466,45 +496,121 @@ export function renderAdmin() {
   ` : ''}
 
   <!-- Managers Tab -->
-  ${tab === 'managers' && state.userRole === 'super_admin' ? `
+  ${tab === 'managers' && state.adminMode ? `
   <div class="bg-white rounded-xl shadow-card p-5">
     <div class="flex items-center justify-between mb-4">
         <h3 class="text-g text-lg">System Managers (Hostel Owners)</h3>
         <button onclick="App.openModal('addManager')" class="btn-g btn-sm">+ Add New Manager</button>
     </div>
     <div id="managersList" class="min-h-[200px]">
-        <p class="text-center py-12 text-gray-400">Loading managers...</p>
+      ${state.managersLoading ? '<p class="text-center py-12 text-gray-400">Loading managers...</p>' : ''}
+      ${!state.managersLoading && state.managers.length === 0 ? '<p class="text-center py-8 text-gray-400">No managers found.</p>' : ''}
+      ${!state.managersLoading && state.managers.length > 0 ? `
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="tbl-hd">
+              <tr><th>Name</th><th>Email</th><th>Role</th><th>Permissions</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              ${state.managers.map(u => {
+                const badge = u.status === 'active' ? 'badge-ok' : 'badge-warn';
+                const btnClr = u.status === 'active' ? 'text-red-500' : 'text-green-600';
+                const btnTxt = u.status === 'active' ? 'Suspend' : 'Activate';
+                const nextSt = u.status === 'active' ? 'suspended' : 'active';
+                const p = u.permissions || {};
+                const pKeys = Object.keys(p).filter(k => p[k]);
+                const pTxt = pKeys.length ? pKeys.join(', ') : 'none';
+                return `<tr class="tbl-row">
+                  <td class="font-semibold">${e(u.name)}</td>
+                  <td class="text-xs text-gray-500">${e(u.email)}</td>
+                  <td class="text-xs text-gray-500">${e(u.role_name || '—')}</td>
+                  <td class="text-xs text-gray-500">${e(pTxt)}</td>
+                  <td><span class="text-xs px-2 py-0.5 rounded-full font-semibold ${badge}">${e(u.status)}</span></td>
+                  <td><button onclick="App.doUpdateUserStatus(${u.id}, '${nextSt}')" class="text-xs font-semibold ${btnClr} hover:underline">${btnTxt}</button></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>` : ''}
     </div>
-    <script>
-      (function() {
-        const wrap = document.getElementById('managersList');
-        if (!wrap) return;
-        import('./js/storage.js').then(m => m.loadUsers('hostel_owner')).then(users => {
-          if (!users || users.length === 0) {
-            wrap.innerHTML = '<p class="text-center py-8 text-gray-400">No managers found.</p>';
-            return;
-          }
-          let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="tbl-hd"><tr>' +
-                     '<th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Actions</th>' +
-                     '</tr></thead><tbody>';
-          users.forEach(u => {
-            const badge = u.status === "active" ? "badge-ok" : "badge-warn";
-            const btnClr = u.status === "active" ? "text-red-500" : "text-green-600";
-            const btnTxt = u.status === "active" ? "Suspend" : "Activate";
-            const nextSt = u.status === "active" ? "suspended" : "active";
-            html += '<tr class="tbl-row">' +
-                    '<td class="font-semibold">' + Sec.sanitize(u.name) + '</td>' +
-                    '<td class="text-xs text-gray-500">' + Sec.sanitize(u.email) + '</td>' +
-                    '<td class="text-xs text-gray-500">' + Sec.sanitize(u.phone) + '</td>' +
-                    '<td><span class="text-xs px-2 py-0.5 rounded-full font-semibold ' + badge + '">' + u.status + '</span></td>' +
-                    '<td><button onclick="App.doUpdateUserStatus(' + u.id + ', \\'' + nextSt + '\\')" class="text-xs font-semibold ' + btnClr + ' hover:underline">' + btnTxt + '</button></td>' +
-                    '</tr>';
-          });
-          html += '</tbody></table></div>';
-          wrap.innerHTML = html;
-        });
-      })();
-    </script>
+  </div>
+  ` : ''}
+
+  ${tab === 'roles' && state.adminMode ? `
+  <div class="bg-white rounded-xl shadow-card p-5 mb-6">
+    <h3 class="text-g text-lg mb-3">Roles</h3>
+    <div class="flex gap-2 mb-4">
+      <input id="roleName" class="inp" placeholder="Role name (e.g. hostel_manager)" maxlength="50"/>
+      <button class="btn-g" onclick="App.doAddRole()">Add Role</button>
+    </div>
+    ${state.rolesLoading ? '<p class="text-gray-400 text-sm">Loading roles...</p>' : ''}
+    ${!state.rolesLoading && state.roles.length === 0 ? '<p class="text-gray-400 text-sm">No roles yet.</p>' : ''}
+    ${!state.rolesLoading && state.roles.length > 0 ? `
+      <div class="overflow-x-auto">
+        <table class="w-full"><thead class="tbl-hd"><tr><th>ID</th><th>Name</th></tr></thead>
+          <tbody>${state.roles.map(r => `<tr class="tbl-row"><td>${r.id}</td><td>${e(r.name)}</td></tr>`).join('')}</tbody>
+        </table>
+      </div>` : ''}
+  </div>
+  ` : ''}
+
+  ${tab === 'permissions' && state.adminMode ? `
+  <div class="bg-white rounded-xl shadow-card p-5 mb-6">
+    <h3 class="text-g text-lg mb-3">Permissions</h3>
+    <div class="flex gap-2 mb-4 flex-wrap">
+      <input id="permName" class="inp" placeholder="Permission name (e.g. manage_rooms)" maxlength="50"/>
+      <button class="btn-g" onclick="App.doAddPermission()">Add Permission</button>
+      <button class="btn-out" onclick="App.doSeedPermissions()">Seed Default Permissions</button>
+    </div>
+    ${state.permissionsLoading ? '<p class="text-gray-400 text-sm">Loading permissions...</p>' : ''}
+    ${!state.permissionsLoading && state.permissions.length === 0 ? '<p class="text-gray-400 text-sm">No permissions yet.</p>' : ''}
+    ${!state.permissionsLoading && state.permissions.length > 0 ? `
+      <div class="overflow-x-auto">
+        <table class="w-full"><thead class="tbl-hd"><tr><th>ID</th><th>Name</th></tr></thead>
+          <tbody>${state.permissions.map(p => `<tr class="tbl-row"><td>${p.id}</td><td>${e(p.name)}</td></tr>`).join('')}</tbody>
+        </table>
+      </div>` : ''}
+  </div>
+  ` : ''}
+
+  ${tab === 'users' && state.adminMode ? `
+  <div class="bg-white rounded-xl shadow-card p-5">
+    <h3 class="text-g text-lg mb-3">Assign Roles & Permissions to Users</h3>
+    ${state.usersLoading ? '<p class="text-gray-400 text-sm">Loading users...</p>' : ''}
+    ${!state.usersLoading && state.users.length === 0 ? '<p class="text-gray-400 text-sm">No users found.</p>' : ''}
+    ${!state.usersLoading && state.users.length > 0 ? state.users.map(u => `
+      <details class="border rounded-xl p-3 mb-3">
+        <summary class="cursor-pointer list-none flex items-center justify-between gap-3">
+          <div class="font-semibold">${e(u.name)} <span class="text-xs text-gray-500">(${e(u.email)})</span></div>
+          <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${u.status === 'active' ? 'badge-ok' : 'badge-warn'}">${e(u.status)}</span>
+        </summary>
+        <div class="grid md:grid-cols-3 gap-3 mt-3">
+          <div>
+            <label class="lbl">User Type</label>
+            <select id="uType_${u.id}" class="inp">
+              ${['admin','hostel_owner','student'].map(t => `<option value="${t}"${u.role===t?' selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Role</label>
+            <select id="uRole_${u.id}" class="inp">
+              <option value="">No role</option>
+              ${(state.roles||[]).map(r => `<option value="${r.id}"${u.role_id===r.id?' selected':''}>${e(r.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button class="btn-g w-full" onclick="App.doAssignUserAccess(${u.id})">Save Access</button>
+          </div>
+        </div>
+        <div class="mt-2 text-xs text-gray-500">Permissions:</div>
+        <div class="grid md:grid-cols-3 gap-2 text-sm mt-1">
+          ${(state.permissions||[]).map(p => {
+            const checked = !!(u.permissions && u.permissions[p.name]);
+            return `<label><input type="checkbox" id="uPerm_${u.id}_${p.id}"${checked?' checked':''}> ${e(p.name)}</label>`;
+          }).join('')}
+        </div>
+      </details>
+    `).join('') : ''}
   </div>
   ` : ''}`;
 }

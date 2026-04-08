@@ -11,11 +11,12 @@
 import { state } from '../state.js';
 
 export function renderNav() {
-  const { view, adminMode } = state;
+  const { view, adminMode, userRole } = state;
+  const isSystemAdmin = userRole === 'admin';
 
   const adminLinks = adminMode
     ? `<button onclick="App.go('admin')"    class="nav-a ${view==='admin'    ?'active':''}">Admin</button>
-       <button onclick="App.go('security')" class="nav-a ${view==='security' ?'active':''}">🔐 Security</button>
+       ${isSystemAdmin ? `<button onclick="App.go('security')" class="nav-a ${view==='security' ?'active':''}">🔐 Security</button>` : ''}
        <button onclick="App.logout()"       class="text-red-300 text-xs border border-red-400 px-2 py-1 rounded font-semibold hover:text-red-100">Logout</button>`
     : `<button onclick="App.openModal('adminLogin')" class="text-white text-xs border border-white border-opacity-30 px-3 py-1 rounded-full hover:bg-white hover:bg-opacity-10">Admin Login</button>`;
 
@@ -55,7 +56,7 @@ export function renderNav() {
       <button onclick="App.go('myBookings')" class="nav-a text-left py-1">📋 My Bookings</button>
       ${adminMode
         ? `<button onclick="App.go('admin')"    class="nav-a text-left py-1">⚙️ Admin</button>
-           <button onclick="App.go('security')" class="nav-a text-left py-1">🔐 Security</button>
+           ${isSystemAdmin ? `<button onclick="App.go('security')" class="nav-a text-left py-1">🔐 Security</button>` : ''}
            <button onclick="App.logout()"       class="text-red-300 text-left text-sm py-1">🚪 Logout</button>`
         : `<button onclick="App.openModal('adminLogin')" class="nav-a text-left py-1">🔐 Admin Login</button>`
       }

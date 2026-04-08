@@ -20,8 +20,11 @@ import { renderHostels, renderHostelDetail, renderMyBookings, renderAdmin, rende
 import { renderModal } from './modals/index.js';
 import {
   doLogin, doLogout,
+  doAddManager, doUpdateUserStatus,
+  ensureManagersLoaded, ensureRolesLoaded, ensurePermissionsLoaded, ensureUsersLoaded,
+  doAddRole, doAddPermission, doSeedPermissions, doAssignUserAccess, doAssignHostelManager,
   doAddHostel, doEditHostel, doDelHostel,
-  doAddRoom, doEditRoom, doDelRoom, releaseRoom, confirmRoomPayment,
+  doAddRoom, doEditRoom, doDelRoom, releaseRoom, confirmRoomPayment, resendStudentCredentials,
   openBooking, bStep1, bStep2, confirmBooking, lookupBooking,
   handleImgUpload, handleDrop, clearImg, previewMap, liveVal,
   toggleShortlist, downloadBookingSlip, setRating,
@@ -45,7 +48,7 @@ function render() {
 window.addEventListener('mmu:sessionExpired', () => {
   auditLog('SESSION_EXPIRED', 'Admin session expired – idle timeout');
   state.adminMode = false;
-  setState({ view: 'home', modal: null });
+  setState({ view: 'home', modal: null, adminUser: '', userId: null, userEmail: '', userRole: '', userPermissions: {}, assignedHostelIds: [] });
   showToast('Admin session expired. Please log in again.', 'warn');
 });
 
@@ -53,6 +56,11 @@ window.addEventListener('mmu:sessionExpired', () => {
 window.App = Object.freeze({
   go(view, patch = {}) {
     if (!ALLOWED_VIEWS.includes(view)) { console.warn('[Security] Blocked nav:', view); return; }
+    if (view === 'security' && state.userRole !== 'admin') {
+      showToast('Only admin can access Security.', 'error');
+      setState({ view: 'admin', modal: null });
+      return;
+    }
     setState({ view, modal: null, ...patch });
   },
   setState(patch) { setState(patch); },
@@ -74,12 +82,15 @@ window.App = Object.freeze({
 
   /* ── Auth ────────────────────────────────────────────────────────────── */
   doLogin, logout: doLogout,
+  doAddManager, doUpdateUserStatus,
+  ensureManagersLoaded, ensureRolesLoaded, ensurePermissionsLoaded, ensureUsersLoaded,
+  doAddRole, doAddPermission, doSeedPermissions, doAssignUserAccess, doAssignHostelManager,
 
   /* ── Hostel CRUD ─────────────────────────────────────────────────────── */
   doAddHostel, doEditHostel, doDelHostel,
 
   /* ── Room CRUD ───────────────────────────────────────────────────────── */
-  doAddRoom, doEditRoom, doDelRoom, releaseRoom, confirmRoomPayment,
+  doAddRoom, doEditRoom, doDelRoom, releaseRoom, confirmRoomPayment, resendStudentCredentials,
 
   /* ── Booking flow ────────────────────────────────────────────────────── */
   openBooking, bStep1, bStep2, confirmBooking, lookupBooking,
