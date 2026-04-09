@@ -16,7 +16,7 @@ import { ALLOWED_VIEWS } from './data.js';
 import { renderNav }  from './components/nav.js';
 import { renderToast, showToast } from './components/toast.js';
 import { renderHome } from './views/home.js';
-import { renderHostels, renderHostelDetail, renderMyBookings, renderAdmin, renderSecurity } from './views/pages.js';
+import { renderHostels, renderHostelDetail, renderMyBookings, renderStudentDashboard, renderAdmin, renderSecurity } from './views/pages.js';
 import { renderModal } from './modals/index.js';
 import {
   doLogin, doLogout,
@@ -25,6 +25,7 @@ import {
   doAddRole, doAddPermission, doSeedPermissions, doAssignUserAccess, doAssignHostelManager,
   doAddHostel, doEditHostel, doDelHostel,
   doAddRoom, doEditRoom, doDelRoom, releaseRoom, confirmRoomPayment, resendStudentCredentials,
+  onRoomImagePick, clearRoomImagePick,
   openBooking, bStep1, bStep2, confirmBooking, lookupBooking,
   handleImgUpload, handleDrop, clearImg, previewMap, liveVal,
   toggleShortlist, downloadBookingSlip, setRating,
@@ -36,7 +37,7 @@ function render() {
   if (!root) return;
   const views = {
     home: renderHome, hostels: renderHostels, hostelDetail: renderHostelDetail,
-    admin: renderAdmin, myBookings: renderMyBookings, security: renderSecurity,
+    admin: renderAdmin, myBookings: renderMyBookings, studentDashboard: renderStudentDashboard, security: renderSecurity,
   };
   const viewFn = views[state.view] || renderHome;
   root.innerHTML = renderNav() +
@@ -64,11 +65,15 @@ window.App = Object.freeze({
     setState({ view, modal: null, ...patch });
   },
   setState(patch) { setState(patch); },
-  openModal(name, data = {}) { setState({ modal: name, modalData: data }); },
-  closeModal() { setState({ modal: null, pendingImg: null }); },
+  openModal(name, data = {}) {
+    const patch = { modal: name, modalData: data };
+    if (name === 'addRoom' || name === 'editRoom') patch.pendingRoomImage = null;
+    setState(patch);
+  },
+  closeModal() { setState({ modal: null, pendingImg: null, pendingRoomImage: null }); },
   handleOverlayClick(ev) {
     if (ev.target?.id === 'modal-overlay' && state.modal !== 'success')
-      setState({ modal: null, pendingImg: null });
+      setState({ modal: null, pendingImg: null, pendingRoomImage: null });
   },
   requireAdmin() {
     if (!state.adminMode || !isAuthenticated()) {
@@ -91,6 +96,7 @@ window.App = Object.freeze({
 
   /* ── Room CRUD ───────────────────────────────────────────────────────── */
   doAddRoom, doEditRoom, doDelRoom, releaseRoom, confirmRoomPayment, resendStudentCredentials,
+  onRoomImagePick, clearRoomImagePick,
 
   /* ── Booking flow ────────────────────────────────────────────────────── */
   openBooking, bStep1, bStep2, confirmBooking, lookupBooking,

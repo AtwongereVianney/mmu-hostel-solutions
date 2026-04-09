@@ -76,6 +76,8 @@ export const state = {
 
   /* image upload staging */
   pendingImg:  null,
+  /** { dataUrl, base64, filename } after user picks a room photo in Add/Edit Room */
+  pendingRoomImage: null,
 
   /* feedback */
   toast:       null,         // { msg, type } or null

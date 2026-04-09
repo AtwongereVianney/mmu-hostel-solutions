@@ -14,7 +14,7 @@ import { state }                      from '../state.js';
 import { hostels, bookings }          from '../state.js';
 import {
   e, formatPrice, roomStats, getHostel,
-  mapEmbedUrl, mapLinkUrl, hostelCoverHtml, hostelThumbnailHtml,
+  mapEmbedUrl, mapLinkUrl, hostelCoverHtml, hostelThumbnailHtml, roomPreviewHtml,
   bookingCardHtml, starRatingHtml, availabilityBadgeHtml, skeletonCardHtml,
 } from '../utils.js';
 import { renderHostelCard }           from '../components/hostelCard.js';
@@ -168,6 +168,7 @@ export function renderHostelDetail() {
           const isAvail = r.status === 'available';
           return `
           <div class="bg-white rounded-xl shadow-card overflow-hidden ${isAvail ? 'shadow-hover' : 'opacity-80'}">
+            ${roomPreviewHtml(r, h)}
             <!-- Room header stripe -->
             <div class="px-4 py-3 flex items-center justify-between" style="background:${isAvail ? '#f0fdf4' : '#f9fafb'}; border-bottom:1px solid #f3f4f6">
               <div>
@@ -300,6 +301,69 @@ export function renderMyBookings() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   STUDENT DASHBOARD
+══════════════════════════════════════════════════════════════════════════ */
+export function renderStudentDashboard() {
+  if (state.userRole !== 'student') {
+    return '<div class="text-center py-10 text-gray-400">Student dashboard is available after student login.</div>';
+  }
+
+  const mine = bookings
+    .filter(b => (b.email || '').toLowerCase() === (state.userEmail || '').toLowerCase())
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  const latest = mine[0] || null;
+  const hostel = latest ? getHostel(latest.hostelId) : null;
+  const room = latest && hostel ? (hostel.rooms || []).find(r => r.id === latest.roomId) : null;
+
+  const pending = mine.filter(b => b.status === 'pending').length;
+  const confirmed = mine.filter(b => b.status === 'confirmed').length;
+
+  return `
+  <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
+    <div>
+      <h2 class="text-g text-2xl">Student Dashboard</h2>
+      <p class="text-gray-500 text-sm">Welcome ${e(state.adminUser || 'Student')}. Track your booking status and hostel details.</p>
+    </div>
+    <button onclick="App.go('hostels')" class="btn-out">Browse Hostels</button>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-card p-4">
+      <div class="text-xs text-gray-500">Total Bookings</div>
+      <div class="text-2xl font-bold text-g">${mine.length}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-card p-4">
+      <div class="text-xs text-gray-500">Pending</div>
+      <div class="text-2xl font-bold text-yellow-600">${pending}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-card p-4">
+      <div class="text-xs text-gray-500">Confirmed</div>
+      <div class="text-2xl font-bold text-green-700">${confirmed}</div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-card p-5 mb-6">
+    <h3 class="text-g text-lg mb-3">Latest Booking</h3>
+    ${latest ? `
+      <div class="grid md:grid-cols-2 gap-3 text-sm">
+        <div><span class="text-gray-500">Reference:</span> <b>#${e(latest.id)}</b></div>
+        <div><span class="text-gray-500">Status:</span> <b class="${latest.status==='confirmed'?'text-green-700':'text-yellow-700'}">${e(latest.status)}</b></div>
+        <div><span class="text-gray-500">Hostel:</span> <b>${e(hostel?.name || '—')}</b></div>
+        <div><span class="text-gray-500">Room:</span> <b>${e(room?.number || '—')} ${room?.type ? `(${e(room.type)})` : ''}</b></div>
+        <div><span class="text-gray-500">Date:</span> <b>${e(latest.date || '—')}</b></div>
+        <div><span class="text-gray-500">Course:</span> <b>${e(latest.course || '—')}</b></div>
+      </div>
+      ${hostel ? `<div class="mt-4"><button class="btn-g" onclick="App.go('hostelDetail', { selH: ${hostel.id}, fType: 'All' })">View Hostel Details</button></div>` : ''}
+    ` : '<p class="text-gray-400 text-sm">No booking found for your account yet.</p>'}
+  </div>
+
+  <div class="bg-white rounded-xl shadow-card p-5">
+    <h3 class="text-g text-lg mb-3">My Booking History</h3>
+    ${mine.length ? `<div class="space-y-3">${mine.map(bookingCardHtml).join('')}</div>` : '<p class="text-gray-400 text-sm">No bookings yet.</p>'}
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    ADMIN PANEL
 ══════════════════════════════════════════════════════════════════════════ */
 export function renderAdmin() {
@@ -342,6 +406,9 @@ export function renderAdmin() {
     setTimeout(() => window.App?.ensureRolesLoaded?.(), 0);
     setTimeout(() => window.App?.ensurePermissionsLoaded?.(), 0);
   }
+  if (tab === 'students' && state.adminMode && !state.usersLoaded && !state.usersLoading) {
+    setTimeout(() => window.App?.ensureUsersLoaded?.(), 0);
+  }
 
   return `
   <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
@@ -363,6 +430,7 @@ export function renderAdmin() {
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='roles' ? 'active' : ''}" onclick="App.setState({ adminTab: 'roles' }); App.ensureRolesLoaded();">🪪 Roles</button>` : ''}
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='permissions' ? 'active' : ''}" onclick="App.setState({ adminTab: 'permissions' }); App.ensurePermissionsLoaded();">🛡 Permissions</button>` : ''}
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='users' ? 'active' : ''}" onclick="App.setState({ adminTab: 'users' }); App.ensureUsersLoaded();">👤 Users</button>` : ''}
+    ${(isSystemAdmin || can('view_users') || can('manage_users')) ? `<button class="tab-btn ${tab==='students' ? 'active' : ''}" onclick="App.setState({ adminTab: 'students' }); App.ensureUsersLoaded();">🎓 Students</button>` : ''}
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.openModal('addManager', {})">➕ Add Users</button>` : ''}
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.go('security')">🔐 Security</button>` : ''}
   </div>
@@ -570,6 +638,43 @@ export function renderAdmin() {
           <tbody>${state.permissions.map(p => `<tr class="tbl-row"><td>${p.id}</td><td>${e(p.name)}</td></tr>`).join('')}</tbody>
         </table>
       </div>` : ''}
+  </div>
+  ` : ''}
+
+  ${tab === 'students' && state.adminMode ? `
+  <div class="bg-white rounded-xl shadow-card p-5 mb-6">
+    <h3 class="text-g text-lg mb-3">Students in Assigned Hostels</h3>
+    ${(() => {
+      const userMap = new Map((state.users || []).map(u => [Number(u.id), u]));
+      const rows = [];
+      const seen = new Set();
+      for (const b of (visibleBookings || [])) {
+        const key = `${b.userId || ''}|${(b.email || '').toLowerCase()}|${b.hostelId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const u = b.userId ? userMap.get(Number(b.userId)) : null;
+        const status = u?.status || 'active';
+        const nextSt = status === 'active' ? 'suspended' : 'active';
+        const bh = getHostel(b.hostelId);
+        rows.push(`
+          <tr class="tbl-row">
+            <td class="font-semibold">${e(b.studentName || u?.name || 'Student')}</td>
+            <td class="text-xs text-gray-500">${e(b.email || u?.email || '—')}</td>
+            <td class="text-xs text-gray-500">${e(b.regNo || '—')}</td>
+            <td class="text-xs text-gray-500">${e(bh?.name || '—')}</td>
+            <td><span class="text-xs px-2 py-0.5 rounded-full font-semibold ${status==='active'?'badge-ok':'badge-warn'}">${e(status)}</span></td>
+            <td>
+              ${b.userId
+                ? `<button onclick="App.doUpdateUserStatus(${Number(b.userId)}, '${nextSt}')" class="text-xs font-semibold ${status==='active'?'text-red-500':'text-green-600'} hover:underline">${status==='active'?'Suspend':'Activate'}</button>`
+                : '<span class="text-xs text-gray-300">—</span>'}
+            </td>
+          </tr>
+        `);
+      }
+      return rows.length
+        ? `<div class="overflow-x-auto"><table class="w-full"><thead class="tbl-hd"><tr><th>Name</th><th>Email</th><th>Reg No</th><th>Hostel</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`
+        : '<p class="text-gray-400 text-sm">No students found in your assigned hostels yet.</p>';
+    })()}
   </div>
   ` : ''}
 

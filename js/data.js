@@ -19,7 +19,7 @@ export const ADMIN_PASS_HASH = hashPassword('admin123');
 
 /** Allowed navigation views (open-redirect guard) */
 export const ALLOWED_VIEWS = Object.freeze([
-  'home', 'hostels', 'hostelDetail', 'admin', 'myBookings', 'security',
+  'home', 'hostels', 'hostelDetail', 'admin', 'myBookings', 'studentDashboard', 'security',
 ]);
 
 /** Room types */

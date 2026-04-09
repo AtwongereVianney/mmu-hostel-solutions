@@ -9,11 +9,80 @@
 'use strict';
 
 import { escapeHtml, safeImgSrc } from './security.js';
-import { hostels, state }         from './state.js';
+import { hostels, state } from './state.js';
 
 /* Re-export escapeHtml as the short alias used throughout templates */
 export const e = escapeHtml;
 export { escapeHtml };
+
+/** Whitelist: only serve images from our known upload folders */
+const BACKEND_ASSET_IMG_RE = /^assets\/images\/(?:rooms|hostels)\/[A-Za-z0-9_.\-]+\.(?:jpe?g|png|gif|webp)$/i;
+
+/** Base URL for `new-hostel/` (matches js/storage.js getApiBaseUrl) */
+export function getBackendPublicBase() {
+  if (typeof window === 'undefined') return '';
+  if (window.location.port === '3000') {
+    return 'http://localhost/mmu-hostel%20solutions/new-hostel/';
+  }
+  try {
+    return new URL('new-hostel/', window.location.href).href;
+  } catch {
+    return '';
+  }
+}
+
+/** Turn a DB-stored relative path into an absolute URL safe for <img src> */
+export function backendAssetImgUrl(relPath) {
+  if (relPath == null || relPath === '') return null;
+  const p = String(relPath).trim().replace(/^\/+/, '');
+  if (/^https?:\/\//i.test(p)) return safeImgSrc(p) ? p : null;
+  if (!BACKEND_ASSET_IMG_RE.test(p)) return null;
+  const base = getBackendPublicBase();
+  if (!base) return null;
+  try {
+    return new URL(p, base).href;
+  } catch {
+    return null;
+  }
+}
+
+function safeHostelAccent(hex) {
+  return /^#[0-9A-Fa-f]{6}$/.test(String(hex || '')) ? hex : '#1a5c38';
+}
+
+/**
+ * Room card / modal preview: room photo if available, else hostel gallery, else illustrative placeholder.
+ * @param {{ image?: string|null, number?: string, type?: string }} room
+ * @param {{ image?: string|null, images?: string[], color?: string, emoji?: string }} hostel
+ */
+export function roomPreviewHtml(room, hostel, opts = {}) {
+  const h = hostel || {};
+  const compact = !!opts.compact;
+  let src = backendAssetImgUrl(room?.image);
+  if (!src && Array.isArray(h.images) && h.images[0]) {
+    src = backendAssetImgUrl(h.images[0]);
+  }
+  if (!src && h.image) {
+    const tryH = safeImgSrc(h.image) || backendAssetImgUrl(h.image);
+    src = tryH || null;
+  }
+  const alt = `Room ${room?.number ?? ''}`.trim() || 'Room preview';
+  const cls = compact ? 'room-preview-img room-preview-img--sm' : 'room-preview-img';
+  if (src) {
+    return `<div class="room-preview-wrap${compact ? ' room-preview-wrap--sm' : ''}"><img src="${e(src)}" class="${cls}" alt="${e(alt)}" loading="lazy"/></div>`;
+  }
+  const accent = safeHostelAccent(h.color);
+  const num = e(room?.number ?? '');
+  const typ = e(room?.type ?? 'Room');
+  const bed = room?.type === 'Single' ? '🛏' : room?.type === 'Double' ? '🛏🛏' : '🛏🛏🛏';
+  return `<div class="room-preview-placeholder${compact ? ' room-preview-placeholder--sm' : ''}" style="background:linear-gradient(135deg,${e(accent)}22,${e(accent)}55)">
+    <span class="room-preview-ph-inner">
+      <span class="room-preview-ph-bed">${bed}</span>
+      <span class="room-preview-ph-num">Room ${num}</span>
+      <span class="room-preview-ph-type">${typ}</span>
+    </span>
+  </div>`;
+}
 
 /* ── Data helpers ─────────────────────────────────────────────────────────── */
 

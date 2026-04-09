@@ -45,14 +45,23 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
     }
 
     const response = await fetch(url, options);
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
     }
-
-    return await response.json();
+    if (!response.ok) {
+      return {
+        success: false,
+        error: payload?.error || `API request failed: ${response.status}`,
+        status: response.status,
+      };
+    }
+    return payload;
   } catch (error) {
     console.warn(`API request failed for ${endpoint}:`, error.message);
-    return null;
+    return { success: false, error: error.message || 'Network error' };
   }
 }
 
@@ -128,6 +137,19 @@ async function secureSet(key, value) {
   if (encrypted) localStorage.setItem(key, encrypted);
 }
 
+/** Strip one-time API payloads (e.g. base64 room photos) before caching to localStorage */
+function hostelsForLocalStorage(hostels) {
+  if (!Array.isArray(hostels)) return hostels;
+  return hostels.map(h => ({
+    ...h,
+    rooms: (h.rooms || []).map((r) => {
+      const copy = { ...r };
+      delete copy.image_upload;
+      return copy;
+    }),
+  }));
+}
+
 /* ── Public API ──────────────────────────────────────────────────────────── */
 
 /** Load all persisted data and populate the state stores */
@@ -180,7 +202,8 @@ export async function loadData() {
       h.amenities = Array.isArray(h.amenities) ? h.amenities : (seed?.amenities ?? []);
       h.gender = h.gender ?? seed?.gender ?? 'Mixed';
       h.distance = h.distance ?? seed?.distance ?? '';
-      h.image = h.image ?? seed?.image ?? null;
+      const firstHostelImg = Array.isArray(h.images) && h.images.length ? h.images[0] : null;
+      h.image = h.image ?? firstHostelImg ?? seed?.image ?? null;
       h.emoji = h.emoji ?? seed?.emoji ?? '🏠';
       h.color = h.color ?? seed?.color ?? '#1a5c38';
       h.rating = (h.rating ?? seed?.rating ?? 0);
@@ -197,6 +220,7 @@ export async function loadData() {
         floor: r.floor ?? null,
         bookedBy: r.bookedBy ?? null,
         regNo: r.regNo ?? null,
+        image: r.image ?? r.image_path ?? null,
       }));
       return h;
     });
@@ -210,8 +234,8 @@ export async function loadData() {
 export async function saveData() {
   const { hostels, bookings } = await import('./state.js');
 
-  // Save to localStorage immediately for responsiveness
-  await secureSet(STORAGE_KEYS.hostels, hostels);
+  // Save to localStorage immediately for responsiveness (no transient upload blobs)
+  await secureSet(STORAGE_KEYS.hostels, hostelsForLocalStorage(hostels));
   await secureSet(STORAGE_KEYS.bookings, bookings);
 
   // Try to sync with API (don't block on failure)

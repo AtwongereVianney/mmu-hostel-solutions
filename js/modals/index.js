@@ -11,7 +11,7 @@
 'use strict';
 
 import { state }        from '../state.js';
-import { e, formatPrice, getHostel, mapEmbedUrl, mapLinkUrl, hostelCoverHtml, starRatingHtml } from '../utils.js';
+import { e, formatPrice, getHostel, mapEmbedUrl, mapLinkUrl, hostelCoverHtml, starRatingHtml, roomPreviewHtml, backendAssetImgUrl } from '../utils.js';
 import { getCsrfToken, isLoginLocked, getBruteForceState } from '../security.js';
 import { ROOM_TYPES, FLOOR_OPTIONS, GENDER_OPTIONS, SEMESTERS, STUDY_YEARS } from '../data.js';
 
@@ -70,7 +70,7 @@ function modalAdminLogin() {
   const csrf = getCsrfToken();
 
   return `
-  ${mHead('Admin Login', '🔐')}
+  ${mHead('Login', '🔐')}
   <div class="p-5">
     <div class="text-xs text-gray-400 mb-4">🛡 Protected by brute-force lockout &amp; CSRF token</div>
     ${lk.locked ? `
@@ -292,11 +292,27 @@ function modalRoomForm(isEdit) {
   const csrf = getCsrfToken();
   const h    = getHostel(state.modalData.hostelId);
   const r    = isEdit ? h?.rooms.find(x => x.id === state.modalData.roomId) : null;
+  const pending = state.pendingRoomImage;
+  const curPhoto = !pending?.dataUrl && isEdit && r?.image ? backendAssetImgUrl(r.image) : null;
 
   return `
   ${mHead(isEdit ? `Edit Room ${r?.number ?? ''}` : `Add Room — ${h?.name ?? ''}`, isEdit ? '✏️' : '🚪')}
   <div class="p-5 space-y-4">
     <input type="hidden" id="rcsrf" value="${e(csrf)}"/>
+    <div>
+      <label class="lbl">Room photo (optional)</label>
+      <p class="text-xs text-gray-500 mb-2">Shown on the hostel page and booking flow. Max 2&nbsp;MB (JPEG, PNG, GIF, WebP).</p>
+      <div class="room-form-photo-preview rounded-xl border border-gray-200 overflow-hidden bg-gray-50 mb-2" style="min-height:8rem">
+        ${pending?.dataUrl
+          ? `<img src="${e(pending.dataUrl)}" alt="Selected room preview" class="w-full h-36 object-cover block"/>`
+          : curPhoto
+            ? `<img src="${e(curPhoto)}" alt="Current room photo" class="w-full h-36 object-cover block"/>`
+            : `<div class="flex flex-col items-center justify-center h-36 text-gray-400 text-sm px-4 text-center">No photo selected<br/><span class="text-xs mt-1">Choose an image below to preview</span></div>`}
+      </div>
+      <input type="file" id="rImg" accept="image/jpeg,image/png,image/gif,image/webp" class="text-sm w-full"
+             onchange="App.onRoomImagePick(event)"/>
+      ${pending ? `<button type="button" onclick="App.clearRoomImagePick()" class="mt-1 text-xs font-semibold text-red-600 hover:underline">Remove selected photo</button>` : ''}
+    </div>
     <div class="grid md:grid-cols-2 gap-4">
       <div>
         <label class="lbl">Room Number *</label>
@@ -396,8 +412,9 @@ function modalBooking() {
   return `
   ${mHead(`Book Room ${room.number} — ${h.name}`, '🏨')}
   <div class="p-5">
-    <div class="text-xs text-gray-500 mb-4">
-      ${e(room.type)} · ${e(room.floor)} Floor · ${formatPrice(room.price)}/semester
+    ${roomPreviewHtml(room, h)}
+    <div class="text-xs text-gray-500 mb-4 mt-3">
+      ${e(room.type)} · ${e(room.floor || '—')} Floor · ${formatPrice(room.price)}/semester
     </div>
     <input type="hidden" id="bcsrf" value="${e(csrf)}"/>
 
@@ -588,6 +605,7 @@ function modalBookingSlip() {
   return `
   ${mHead('Booking Slip', '📄')}
   <div class="p-5">
+    ${room && h ? roomPreviewHtml(room, h, { compact: true }) : ''}
     <div class="slip-wrap">
       <div class="slip-header">
         <div style="font-size:2rem">🏠</div>

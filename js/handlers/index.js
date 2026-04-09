@@ -11,7 +11,7 @@
 'use strict';
 
 import { state, setState, hostels, bookings, setBookings } from '../state.js';
-import { saveData, createUser, updateUserStatus, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials }  from '../storage.js';
+import { saveData, loadData, createUser, updateUserStatus, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials }  from '../storage.js';
 import { showToast } from '../components/toast.js';
 import {
   sanitize, validate, hashPassword,
@@ -131,7 +131,7 @@ export async function doLogin() {
           userPermissions: user.permissions || {},
           assignedHostelIds: Array.isArray(user.assigned_hostel_ids) ? user.assigned_hostel_ids : [],
           modal: null,
-          view: user.user_type === 'student' ? 'myBookings' : 'admin',
+          view: user.user_type === 'student' ? 'studentDashboard' : 'admin',
         });
         showToast(`Welcome, ${user.name || 'User'}!`);
         return;
@@ -161,7 +161,7 @@ export async function doAddManager() {
   const name = sanitize(document.getElementById('mN')?.value ?? '', 60);
   const email = sanitize(document.getElementById('mE')?.value ?? '', 80);
   const phone = sanitize(document.getElementById('mPh')?.value ?? '', 20);
-  const password = document.getElementById('mP')?.value ?? '';
+  let password = document.getElementById('mP')?.value ?? '';
   const roleIdRaw = document.getElementById('mRole')?.value ?? '';
   const roleId = roleIdRaw ? parseInt(roleIdRaw, 10) : null;
   const userType = (document.getElementById('mUserType')?.value ?? 'hostel_owner').trim();
@@ -179,13 +179,24 @@ export async function doAddManager() {
   const errEl = document.getElementById('mErr');
   const btn = document.getElementById('mBtn');
 
-  if (!name || !email || password.length < 6) {
-    _fieldErr(errEl, 'Name, email and password (min 6 chars) are required.');
+  if (!name) {
+    _fieldErr(errEl, 'Name is required.');
+    return;
+  }
+  if (!email) {
+    _fieldErr(errEl, 'Email is required.');
     return;
   }
   if (!validate('email', email)) {
     _fieldErr(errEl, 'Invalid email format.');
     return;
+  }
+  if (password && password.length < 6) {
+    _fieldErr(errEl, 'Password must be at least 6 characters, or leave blank to auto-generate.');
+    return;
+  }
+  if (!password) {
+    password = `MMU${Math.random().toString(36).slice(-6)}!`;
   }
 
   if (btn) btn.disabled = true;
@@ -211,6 +222,9 @@ export async function doAddManager() {
 
     await auditLog('USER_CREATED', `Created user: ${email} (${userType || 'hostel_owner'})`);
     showToast('User account created.');
+    if ((document.getElementById('mP')?.value ?? '') === '') {
+      showToast(`Temporary password generated: ${password}`, 'warn');
+    }
     await ensureManagersLoaded(true);
     setState({ modal: null, adminTab: 'managers' });
   } catch (e) {
@@ -229,9 +243,10 @@ export async function doUpdateUserStatus(userId, status) {
     showToast(res?.error || 'Failed to update user status.', 'error');
     return;
   }
-  await auditLog('OWNER_STATUS_CHANGED', `Set owner #${userId} to ${status}`);
+  await auditLog('USER_STATUS_CHANGED', `Set user #${userId} to ${status}`);
   showToast(`User ${status === 'active' ? 'activated' : 'suspended'}.`);
   await ensureManagersLoaded(true);
+  await ensureUsersLoaded(true);
   setState({});
 }
 
@@ -512,6 +527,41 @@ function _readRoomForm() {
   };
 }
 
+export function onRoomImagePick(ev) {
+  const file = ev?.target?.files?.[0];
+  if (!file) {
+    setState({ pendingRoomImage: null });
+    return;
+  }
+  const err = validateImageFile(file);
+  if (err) {
+    showToast(err, 'error');
+    ev.target.value = '';
+    setState({ pendingRoomImage: null });
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = String(reader.result || '');
+    const comma = dataUrl.indexOf(',');
+    const base64 = comma >= 0 ? dataUrl.slice(comma + 1) : '';
+    setState({
+      pendingRoomImage: {
+        dataUrl,
+        base64,
+        filename: file.name || 'room.jpg',
+      },
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+export function clearRoomImagePick() {
+  const inp = document.getElementById('rImg');
+  if (inp) inp.value = '';
+  setState({ pendingRoomImage: null });
+}
+
 function _validateRoomForm(f) {
   if (!verifyCsrfToken(f.csrf))            { _fieldErr('rErr','Invalid security token.'); return false; }
   if (!validate('rnum', f.num))            { _fieldErr('rErr','Invalid room number — alphanumeric only, max 10 chars.'); return false; }
@@ -532,10 +582,18 @@ export async function doAddRoom() {
   if (!canManageHostel(h?.id)) { showToast('You cannot manage rooms for this hostel.', 'error'); return; }
   if (!h) { showToast('Hostel not found.', 'error'); return; }
   if (h.rooms.some(r => r.number === f.num)) { _fieldErr('rErr', `Room ${f.num} already exists in this hostel.`); return; }
-  h.rooms.push({ id: makeId(), number: f.num, type: f.type, floor: f.floor, price: f.price, confirmationFee: f.fee, status: 'available' });
+  const pending = state.pendingRoomImage;
+  const room = { id: makeId(), number: f.num, type: f.type, floor: f.floor, price: f.price, confirmationFee: f.fee, status: 'available' };
+  if (pending?.base64) {
+    room.image_upload = { base64: pending.base64, filename: pending.filename || 'room.jpg' };
+  }
+  h.rooms.push(room);
+  const uploaded = !!pending?.base64;
   await saveData();
+  delete room.image_upload;
+  if (uploaded) await loadData();
   await auditLog('ROOM_CREATED', `Admin added room ${f.num} to ${h.name}`);
-  setState({ modal: null });
+  setState({ modal: null, pendingRoomImage: null });
   showToast(`Room ${f.num} added to ${h.name}!`);
 }
 
@@ -549,11 +607,19 @@ export async function doEditRoom() {
   const rIdx = h?.rooms.findIndex(x => x.id === state.modalData.roomId) ?? -1;
   if (!h || rIdx === -1) { showToast('Room not found.', 'error'); return; }
   if (h.rooms.some((r, i) => r.number === f.num && i !== rIdx)) { _fieldErr('rErr', `Room ${f.num} already exists.`); return; }
-  Object.assign(h.rooms[rIdx], { number: f.num, type: f.type, floor: f.floor, price: f.price, confirmationFee: f.fee, status: f.status });
-  if (f.status === 'available') { delete h.rooms[rIdx].bookedBy; delete h.rooms[rIdx].regNo; }
+  const target = h.rooms[rIdx];
+  const pending = state.pendingRoomImage;
+  Object.assign(target, { number: f.num, type: f.type, floor: f.floor, price: f.price, confirmationFee: f.fee, status: f.status });
+  if (f.status === 'available') { delete target.bookedBy; delete target.regNo; }
+  if (pending?.base64) {
+    target.image_upload = { base64: pending.base64, filename: pending.filename || 'room.jpg' };
+  }
+  const uploaded = !!pending?.base64;
   await saveData();
+  delete target.image_upload;
+  if (uploaded) await loadData();
   await auditLog('ROOM_UPDATED', `Admin updated room ${f.num} in ${h.name}`);
-  setState({ modal: null });
+  setState({ modal: null, pendingRoomImage: null });
   showToast(`Room ${f.num} updated!`);
 }
 
