@@ -577,24 +577,33 @@ export function renderAdmin() {
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead class="tbl-hd">
-              <tr><th>Name</th><th>Email</th><th>Role</th><th>Permissions</th><th>Status</th><th>Actions</th></tr>
+              <tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Assigned Hostels</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
               ${state.managers.map(u => {
                 const badge = u.status === 'active' ? 'badge-ok' : 'badge-warn';
-                const btnClr = u.status === 'active' ? 'text-red-500' : 'text-green-600';
-                const btnTxt = u.status === 'active' ? 'Suspend' : 'Activate';
+                const suspendClr = u.status === 'active' ? 'text-yellow-600' : 'text-green-600';
+                const suspendTxt = u.status === 'active' ? '⏸ Suspend' : '▶ Activate';
                 const nextSt = u.status === 'active' ? 'suspended' : 'active';
                 const p = u.permissions || {};
                 const pKeys = Object.keys(p).filter(k => p[k]);
-                const pTxt = pKeys.length ? pKeys.join(', ') : 'none';
+                const pTxt = pKeys.length ? pKeys.slice(0,2).join(', ') + (pKeys.length > 2 ? ` +${pKeys.length - 2} more` : '') : 'none';
+                const assignedHostels = (hostels || []).filter(h => Number(h.owner_id) === Number(u.id));
+                const hostelNames = assignedHostels.length ? assignedHostels.map(h => e(h.name)).join(', ') : '<span class="text-gray-300">None</span>';
                 return `<tr class="tbl-row">
                   <td class="font-semibold">${e(u.name)}</td>
                   <td class="text-xs text-gray-500">${e(u.email)}</td>
+                  <td class="text-xs text-gray-500">${e(u.phone || '—')}</td>
                   <td class="text-xs text-gray-500">${e(u.role_name || '—')}</td>
-                  <td class="text-xs text-gray-500">${e(pTxt)}</td>
+                  <td class="text-xs text-gray-500">${hostelNames}</td>
                   <td><span class="text-xs px-2 py-0.5 rounded-full font-semibold ${badge}">${e(u.status)}</span></td>
-                  <td><button onclick="App.doUpdateUserStatus(${u.id}, '${nextSt}')" class="text-xs font-semibold ${btnClr} hover:underline">${btnTxt}</button></td>
+                  <td>
+                    <div class="action-row">
+                      <button onclick="App.openModal('editManager', { managerId: ${u.id} })" class="text-xs text-g font-semibold hover:underline">✏️ Edit</button>
+                      <button onclick="App.doUpdateUserStatus(${u.id}, '${nextSt}')" class="text-xs font-semibold ${suspendClr} hover:underline">${suspendTxt}</button>
+                      <button onclick="App.doDeleteManager(${u.id})" class="text-xs text-red-500 font-semibold hover:underline">🗑 Delete</button>
+                    </div>
+                  </td>
                 </tr>`;
               }).join('')}
             </tbody>

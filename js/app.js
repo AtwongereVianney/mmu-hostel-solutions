@@ -20,7 +20,8 @@ import { renderHostels, renderHostelDetail, renderMyBookings, renderStudentDashb
 import { renderModal } from './modals/index.js';
 import {
   doLogin, doLogout,
-  doAddManager, doUpdateUserStatus,
+  doAddManager, doUpdateUserStatus, doDeleteManager,
+
   ensureManagersLoaded, ensureRolesLoaded, ensurePermissionsLoaded, ensureUsersLoaded,
   doAddRole, doAddPermission, doSeedPermissions, doAssignUserAccess, doAssignHostelManager,
   doAddHostel, doEditHostel, doDelHostel,
@@ -87,7 +88,8 @@ window.App = Object.freeze({
 
   /* ── Auth ────────────────────────────────────────────────────────────── */
   doLogin, logout: doLogout,
-  doAddManager, doUpdateUserStatus,
+  doAddManager, doUpdateUserStatus, doDeleteManager,
+
   ensureManagersLoaded, ensureRolesLoaded, ensurePermissionsLoaded, ensureUsersLoaded,
   doAddRole, doAddPermission, doSeedPermissions, doAssignUserAccess, doAssignHostelManager,
 

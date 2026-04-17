@@ -114,6 +114,11 @@ export async function updateUserAccess(id, payload = {}) {
   return apiRequest('users', 'PUT', { id, ...payload });
 }
 
+export async function deleteUser(id) {
+  return apiRequest('users', 'DELETE', { id });
+}
+
+
 export async function assignHostelOwner(hostelId, ownerId) {
   return apiRequest('hostels', 'PUT', { id: hostelId, owner_id: ownerId });
 }

@@ -11,7 +11,8 @@
 'use strict';
 
 import { state, setState, hostels, bookings, setBookings } from '../state.js';
-import { saveData, loadData, createUser, updateUserStatus, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials }  from '../storage.js';
+import { saveData, loadData, createUser, updateUserStatus, deleteUser, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials }  from '../storage.js';
+
 import { showToast } from '../components/toast.js';
 import {
   sanitize, validate, hashPassword,
@@ -254,6 +255,21 @@ export async function doUpdateUserStatus(userId, status) {
   await ensureUsersLoaded(true);
   setState({});
 }
+
+export async function doDeleteManager(userId) {
+  if (!userId) return;
+  if (!confirm('Delete this manager account? Their hostels will be reassigned to the admin.')) return;
+  const res = await deleteUser(userId);
+  if (!res || !res.success) {
+    showToast(res?.error || 'Failed to delete manager.', 'error');
+    return;
+  }
+  await auditLog('USER_DELETED', `Deleted manager #${userId}`);
+  showToast('Manager account deleted.');
+  await ensureManagersLoaded(true);
+  setState({});
+}
+
 
 export async function ensureManagersLoaded(force = false) {
   if (state.managersLoading) return;
