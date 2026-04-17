@@ -46,6 +46,7 @@ function modalContent() {
     case 'bookingSlip':   return modalBookingSlip();
     case 'addManager':    return modalAddManager();
     case 'editManager':   return modalEditManager();
+    case 'delManagerConf': return modalDelManager();
     default:              return '';
   }
 }
@@ -822,6 +823,48 @@ function modalEditManager() {
     <div class="flex gap-3 pt-2">
       <button onclick="App.closeModal()" class="btn-out flex-1">Cancel</button>
       <button id="eMgrBtn" onclick="App.doEditManager()" class="btn-g flex-1">💾 Save Changes</button>
+    </div>
+  </div>`;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DELETE MANAGER CONFIRMATION
+──────────────────────────────────────────────────────────────────────────── */
+function modalDelManager() {
+  const managerId    = Number(state.modalData?.managerId);
+  const manager      = (state.managers || []).find(m => Number(m.id) === managerId);
+  const managerName  = manager?.name ?? 'this manager';
+  const hostelsOwned = (hostels || []).filter(h => Number(h.owner_id) === managerId);
+
+  return `
+  ${mHead('Delete Manager Account', '🗑')}
+  <div class="p-5">
+    <div class="text-center mb-5">
+      <div class="text-5xl mb-3">⚠️</div>
+      <h3 class="text-lg font-bold text-red-600 mb-1">Permanently Delete Account?</h3>
+      <p class="text-gray-600 text-sm">You are about to delete the account of <strong>${e(managerName)}</strong>.</p>
+    </div>
+
+    ${hostelsOwned.length ? `
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-sm">
+      <div class="font-semibold text-amber-700 mb-1">⚠️ ${hostelsOwned.length} hostel(s) will be re-assigned to admin:</div>
+      <ul class="list-disc list-inside text-amber-600 text-xs space-y-0.5">
+        ${hostelsOwned.map(h => `<li>${e(h.name)}</li>`).join('')}
+      </ul>
+    </div>` : ''}
+
+    <div class="bg-red-50 border border-red-200 rounded-xl p-3 mb-5 text-sm text-red-700">
+      ❗ This action <strong>cannot be undone</strong>. The manager will lose all access immediately.
+    </div>
+
+    <div class="flex gap-3">
+      <button onclick="App.closeModal()" class="btn-out flex-1">Cancel</button>
+      <button id="delMgrBtn"
+              onclick="App.doDeleteManager(${managerId})"
+              class="flex-1 py-2 px-4 rounded-xl font-bold text-white transition-opacity hover:opacity-90"
+              style="background:#dc2626">
+        🗑 Yes, Delete Account
+      </button>
     </div>
   </div>`;
 }

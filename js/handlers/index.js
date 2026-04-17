@@ -258,7 +258,6 @@ export async function doUpdateUserStatus(userId, status) {
 
 export async function doDeleteManager(userId) {
   if (!userId) return;
-  if (!confirm('Delete this manager account? Their hostels will be reassigned to the admin.')) return;
   const res = await deleteUser(userId);
   if (!res || !res.success) {
     showToast(res?.error || 'Failed to delete manager.', 'error');

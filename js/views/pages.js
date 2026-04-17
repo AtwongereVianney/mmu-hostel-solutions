@@ -601,7 +601,7 @@ export function renderAdmin() {
                     <div class="action-row">
                       <button onclick="App.openModal('editManager', { managerId: ${u.id} })" class="text-xs text-g font-semibold hover:underline">✏️ Edit</button>
                       <button onclick="App.doUpdateUserStatus(${u.id}, '${nextSt}')" class="text-xs font-semibold ${suspendClr} hover:underline">${suspendTxt}</button>
-                      <button onclick="App.doDeleteManager(${u.id})" class="text-xs text-red-500 font-semibold hover:underline">🗑 Delete</button>
+                      <button onclick="App.openModal('delManagerConf', { managerId: ${u.id} })" class="text-xs text-red-500 font-semibold hover:underline">🗑 Delete</button>
                     </div>
                   </td>
                 </tr>`;
