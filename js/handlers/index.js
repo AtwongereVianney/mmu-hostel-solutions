@@ -176,6 +176,10 @@ export async function doAddManager() {
     permissions.view_bookings = !!document.getElementById('mPermDefaultViewBookings')?.checked;
     permissions.manage_bookings = !!document.getElementById('mPermDefaultManageBookings')?.checked;
   }
+  
+  const assignedHostelNodes = document.getElementById('mAssignedHostels')?.querySelectorAll('option:checked');
+  const assigned_hostel_ids = Array.from(assignedHostelNodes || []).map(o => parseInt(o.value, 10)).filter(id => !isNaN(id));
+
   const errEl = document.getElementById('mErr');
   const btn = document.getElementById('mBtn');
 
@@ -211,6 +215,7 @@ export async function doAddManager() {
       business_id: 1,
       branch_id: 1,
       permissions,
+      assigned_hostel_ids,
     });
 
     if (!res || !res.success) {

@@ -10,7 +10,7 @@
 
 'use strict';
 
-import { state }        from '../state.js';
+import { state, hostels }        from '../state.js';
 import { e, formatPrice, getHostel, mapEmbedUrl, mapLinkUrl, hostelCoverHtml, starRatingHtml, roomPreviewHtml, backendAssetImgUrl } from '../utils.js';
 import { getCsrfToken, isLoginLocked, getBruteForceState } from '../security.js';
 import { ROOM_TYPES, FLOOR_OPTIONS, GENDER_OPTIONS, SEMESTERS, STUDY_YEARS } from '../data.js';
@@ -698,10 +698,17 @@ function modalAddManager() {
 
     <div>
       <label class="lbl">User Type</label>
-      <select id="mUserType" class="inp">
+      <select id="mUserType" class="inp" onchange="document.getElementById('mHostelSection').style.display = this.value === 'hostel_owner' ? 'block' : 'none'">
         <option value="hostel_owner">hostel_owner</option>
         <option value="student">student</option>
         <option value="admin">admin</option>
+      </select>
+    </div>
+
+    <div id="mHostelSection" class="bg-gray-50 rounded-xl p-3 mb-2">
+      <label class="lbl">Assign Hostels <span class="text-xs text-gray-500 font-normal">(Hold Ctrl/Cmd to multi-select)</span></label>
+      <select id="mAssignedHostels" class="inp" multiple size="3" style="height: auto;">
+        ${(hostels || []).map(h => `<option value="${h.id}">${e(h.name)}</option>`).join('')}
       </select>
     </div>
 

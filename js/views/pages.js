@@ -423,7 +423,7 @@ export function renderAdmin() {
   </div>
 
   <!-- Tab switcher -->
-  <div class="flex gap-2 mb-6">
+  <div class="flex flex-wrap gap-2 mb-6">
     <button class="tab-btn ${tab==='hostels'  ? 'active' : ''}" onclick="App.setState({ adminTab: 'hostels' })">🏢 Hostels</button>
     <button class="tab-btn ${tab==='bookings' ? 'active' : ''}" onclick="App.setState({ adminTab: 'bookings' })">📅 Bookings</button>
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='managers' ? 'active' : ''}" onclick="App.setState({ adminTab: 'managers' }); App.ensureManagersLoaded();">👥 Managers</button>` : ''}
