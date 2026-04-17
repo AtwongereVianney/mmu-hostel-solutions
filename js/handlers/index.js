@@ -1250,3 +1250,11 @@ export function stopCamera() {
     capturedImg: null
   });
 }
+
+export function toggleHostelExpand(id) {
+  const current = state.expandedHostels || [];
+  const expanded = current.includes(id)
+    ? current.filter(x => x !== id)
+    : [...current, id];
+  setState({ expandedHostels: expanded });
+}

@@ -84,7 +84,8 @@ export const state = {
   isCaptured:   false,
   capturedImg:  null,
 
-  /* feedback */
+  /* admin */
+  expandedHostels: [],       // array of hostel IDs currently expanded in dashboard
   toast:       null,         // { msg, type } or null
   successMsg:  '',
 };

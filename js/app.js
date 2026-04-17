@@ -32,6 +32,7 @@ import {
   handleImgUpload, handleDrop, clearImg, previewMap, liveVal,
   toggleShortlist, downloadBookingSlip, setRating,
   openCamera, capturePhoto, doApplyCapture, stopCamera,
+  toggleHostelExpand,
 } from './handlers/index.js';
 
 /* Render engine */
@@ -117,6 +118,7 @@ window.App = Object.freeze({
   capturePhoto,          // 🖼 Snap photo
   doApplyCapture,        // ✅ Confirm captured photo
   stopCamera,            // ✕ Stop camera & close
+  toggleHostelExpand,    // ↕ Expand/collapse hostel card
 });
 
 window.Sec = Object.freeze({ sanitize });

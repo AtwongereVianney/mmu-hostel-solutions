@@ -632,3 +632,32 @@ h1, h2, h3, .serif {
   .slip-wrap { border: 2px solid #000; margin: 0; }
   .no-print  { display: none !important; }
 }
+
+/* ── Admin Hostel Accordion ────────────────────────────────────────────── */
+.hostel-accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, opacity 0.2s;
+  opacity: 0;
+}
+.hostel-accordion-content.expanded {
+  max-height: 2000px;
+  opacity: 1;
+}
+.chevron-toggle {
+  transition: transform 0.3s;
+  display: inline-block;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+.chevron-toggle.expanded {
+  transform: rotate(180deg);
+  color: var(--g);
+}
+.hostel-header-clickable {
+  cursor: pointer;
+  user-select: none;
+}
+.hostel-header-clickable:hover {
+  background-color: rgba(26, 92, 56, 0.05) !important;
+}

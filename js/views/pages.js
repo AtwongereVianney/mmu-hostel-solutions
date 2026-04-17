@@ -451,16 +451,20 @@ export function renderAdmin() {
     ${visibleHostels.length === 0 ? '<div class="text-center py-10 text-gray-400 bg-white rounded-xl shadow-card">No hostels assigned to you yet.</div>' : ''}
     ${visibleHostels.map(h => {
       const hs = roomStats(h);
+      const isExpanded = (state.expandedHostels || []).includes(h.id);
       return `
       <div class="bg-white rounded-xl shadow-card overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-3 border-b flex-wrap gap-3" style="background:${e(h.color)}10">
+        <div class="flex items-center justify-between px-5 py-3 border-b flex-wrap gap-3 hostel-header-clickable ${isExpanded ? '' : 'border-b-0'}" 
+             style="background:${e(h.color)}10"
+             onclick="App.toggleHostelExpand(${h.id})">
           <div class="flex items-center gap-3">
+            <span class="chevron-toggle ${isExpanded ? 'expanded' : ''}">▼</span>
             ${hostelThumbnailHtml(h)}
             <div>
               <div class="font-bold text-g">${e(h.name)}</div>
               <div class="text-xs text-gray-500">${e(h.distance)} · ${e(h.gender)}</div>
               ${h.location?.address ? `<div class="text-xs text-gray-400">📍 ${e(h.location.address.slice(0,45))}</div>` : ''}
-              <div class="flex items-center gap-2 mt-1">
+              <div class="flex items-center gap-2 mt-1" onclick="event.stopPropagation()">
                 ${h.rating ? starRatingHtml(h.rating, true) : '<span class="text-xs text-gray-400">No rating</span>'}
                 <input type="number" min="0" max="5" step="0.1"
                        value="${h.rating ?? ''}"
@@ -471,7 +475,7 @@ export function renderAdmin() {
               </div>
             </div>
           </div>
-          <div class="action-row">
+          <div class="action-row" onclick="event.stopPropagation()">
             ${isSystemAdmin ? `
               <select id="hostelOwner_${h.id}" class="inp" style="max-width:12rem;padding:.25rem .4rem;font-size:.75rem;">
                 <option value="">Assign manager</option>
@@ -490,7 +494,8 @@ export function renderAdmin() {
             ${can('delete_hostel') ? `<button onclick="App.requireAdmin() && App.openModal('delHostelConf',{ hostelId:${h.id} })" class="btn-red btn-sm">🗑 Delete</button>` : ''}
           </div>
         </div>
-        <div class="overflow-x-auto">
+        <div class="hostel-accordion-content ${isExpanded ? 'expanded' : ''}">
+          <div class="overflow-x-auto">
           <table class="w-full">
             <thead class="tbl-hd"><tr>
               <th>Room</th><th>Type</th><th>Floor</th><th>Price/Sem</th><th>Conf. Fee</th>
@@ -521,7 +526,8 @@ export function renderAdmin() {
             </tbody>
           </table>
         </div>
-      </div>`;
+      </div>
+    </div>`;
     }).join('')}
   </div>
   ` : ''}
