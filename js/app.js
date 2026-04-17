@@ -31,6 +31,7 @@ import {
   openBooking, bStep1, bStep2, confirmBooking, lookupBooking,
   handleImgUpload, handleDrop, clearImg, previewMap, liveVal,
   toggleShortlist, downloadBookingSlip, setRating,
+  openCamera, capturePhoto, doApplyCapture, stopCamera,
 } from './handlers/index.js';
 
 /* Render engine */
@@ -112,6 +113,10 @@ window.App = Object.freeze({
   toggleShortlist,       // ❤️ Wishlist / shortlist toggle
   downloadBookingSlip,   // 📄 Print booking receipt
   setRating,             // ⭐ Admin sets hostel star rating
+  openCamera,            // 📸 Open camera modal
+  capturePhoto,          // 🖼 Snap photo
+  doApplyCapture,        // ✅ Confirm captured photo
+  stopCamera,            // ✕ Stop camera & close
 });
 
 window.Sec = Object.freeze({ sanitize });

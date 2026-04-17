@@ -11,7 +11,7 @@
 'use strict';
 
 import { state, setState, hostels, bookings, setBookings } from '../state.js';
-import { saveData, loadData, createUser, updateUserStatus, deleteUser, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials }  from '../storage.js';
+import { saveData, loadData, createUser, updateUserStatus, deleteUser, deleteHostel, deleteRoom, deleteBooking, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials }  from '../storage.js';
 
 import { showToast } from '../components/toast.js';
 import {
@@ -577,10 +577,18 @@ export async function doDelHostel() {
   if (!hasPermission('delete_hostel') || !canManageHostel(id)) { showToast('You cannot delete this hostel.', 'error'); return; }
   const h  = getHostel(id);
   if (!h) return;
+  
+  const res = await deleteHostel(id);
+  if (!res || !res.success) {
+    showToast(res?.error || 'Failed to delete hostel via API.', 'error');
+    return;
+  }
+
   const idx = hostels.indexOf(h);
   if (idx !== -1) hostels.splice(idx, 1);
   setBookings(bookings.filter(b => b.hostelId !== id));
-  await saveData();
+  
+  await saveData(); // To sync localStorage
   await auditLog('HOSTEL_DELETED', `Admin deleted hostel: ${h.name}`);
   setState({ modal: null });
   showToast(`"${h.name}" deleted.`, 'warn');
@@ -700,13 +708,25 @@ export async function doEditRoom() {
 export async function doDelRoom() {
   if (!(await ensureLiveAccessSync())) return;
   const h = getHostel(state.modalData.hostelId);
+  if (!h) return;
+  const roomId = state.modalData.roomId;
+
   if (!hasPermission('delete_room') && !hasPermission('manage_rooms')) { showToast('You do not have permission to delete rooms.', 'error'); return; }
-  if (!canManageHostel(h?.id)) { showToast('You cannot manage rooms for this hostel.', 'error'); return; }
-  const r = h?.rooms.find(x => x.id === state.modalData.roomId);
-  if (!h || !r) return;
-  h.rooms = h.rooms.filter(x => x.id !== r.id);
-  setBookings(bookings.filter(b => !(b.hostelId === h.id && b.roomId === r.id)));
-  await saveData();
+  if (!canManageHostel(h.id)) { showToast('You cannot manage rooms for this hostel.', 'error'); return; }
+  
+  const r = h.rooms.find(x => x.id === roomId);
+  if (!r) return;
+
+  const res = await deleteRoom(roomId);
+  if (!res || !res.success) {
+    showToast(res?.error || 'Failed to delete room via API.', 'error');
+    return;
+  }
+
+  h.rooms = h.rooms.filter(x => x.id !== roomId);
+  setBookings(bookings.filter(b => !(b.hostelId === h.id && b.roomId === roomId)));
+  
+  await saveData(); // To sync localStorage
   await auditLog('ROOM_DELETED', `Admin removed room ${r.number} from ${h.name}`);
   setState({ modal: null });
   showToast(`Room ${r.number} removed.`, 'warn');
@@ -723,7 +743,12 @@ export async function releaseRoom(hostelId, roomId) {
   r.status = 'available';
   delete r.bookedBy;
   delete r.regNo;
-  setBookings(bookings.filter(b => !(b.hostelId === hostelId && b.roomId === roomId)));
+  const bookingsToRemove = bookings.filter(b => Number(b.hostelId) === Number(hostelId) && Number(b.roomId) === Number(roomId));
+  for (const b of bookingsToRemove) {
+    if (b.id) await deleteBooking(b.id);
+  }
+
+  setBookings(bookings.filter(b => !(Number(b.hostelId) === Number(hostelId) && Number(b.roomId) === Number(roomId))));
   await saveData();
   await auditLog('BOOKING_RELEASED', `Room ${r.number} in ${h.name} released (was: ${prev})`);
   setState({});
@@ -1139,4 +1164,89 @@ export function liveVal(el, type) {
   if (!v) return;
   const ok = type === 'email' ? (v === '' || validate('email', v)) : validate(type, v);
   el.classList.add(ok ? 'ok' : 'bad');
+}
+
+/* ── Camera Capture Handlers ────────────────────────────────────────────── */
+export async function openCamera(target = 'hostel') {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+    });
+    setState({
+      modal: 'camera',
+      camTarget: target,
+      camStream: stream,
+      isCaptured: false,
+      capturedImg: null
+    });
+    
+    // Attach stream to video element after render
+    setTimeout(() => {
+      const v = document.getElementById('camVideo');
+      if (v) v.srcObject = stream;
+    }, 100);
+  } catch (err) {
+    console.error('Camera access denied:', err);
+    showToast('Could not access camera. Please check permissions.', 'error');
+  }
+}
+
+export function capturePhoto() {
+  const v = document.getElementById('camVideo');
+  const c = document.getElementById('camCanvas');
+  if (!v || !c) return;
+
+  const ctx = c.getContext('2d');
+  // Capture a 4:3 area from the center of the video
+  const vW = v.videoWidth;
+  const vH = v.videoHeight;
+  const targetAspect = 4 / 3;
+  
+  let sW, sH, sX, sY;
+  if (vW / vH > targetAspect) {
+    sH = vH;
+    sW = vH * targetAspect;
+    sX = (vW - sW) / 2;
+    sY = 0;
+  } else {
+    sW = vW;
+    sH = vW / targetAspect;
+    sX = 0;
+    sY = (vH - sH) / 2;
+  }
+
+  ctx.drawImage(v, sX, sY, sW, sH, 0, 0, c.width, c.height);
+  const dataUrl = c.toDataURL('image/jpeg', 1.0);
+  setState({ isCaptured: true, capturedImg: dataUrl });
+}
+
+export function doApplyCapture() {
+  const b64 = state.capturedImg;
+  const target = state.camTarget;
+  stopCamera();
+  
+  if (target === 'room') {
+    state.pendingRoomImage = { dataUrl: b64, base64: b64.split(',')[1], filename: `capture_${Date.now()}.jpg` };
+    // UI update for room modal is handled via reactive state.pendingRoomImage in modalRoomForm
+  } else {
+    state.pendingImg = b64;
+    const drop = document.getElementById('imgDrop');
+    if (drop) {
+      drop.innerHTML = `<img src="${b64}" style="max-height:160px;border-radius:.5rem;margin:0 auto;display:block;" alt="Preview"/>
+        <div class="text-xs text-gray-500 mt-2">Click to change photo</div>`;
+    }
+  }
+  showToast('Photo captured!', 'success');
+}
+
+export function stopCamera() {
+  if (state.camStream) {
+    state.camStream.getTracks().forEach(track => track.stop());
+  }
+  setState({
+    modal: (state.modal === 'camera') ? null : state.modal,
+    camStream: null,
+    isCaptured: false,
+    capturedImg: null
+  });
 }

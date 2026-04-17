@@ -508,6 +508,65 @@ h1, h2, h3, .serif {
 /* ── Error text ──────────────────────────────────────────────────────────── */
 .err-txt { color: #dc2626; font-size: .75rem; }
 
+/* ── Camera Capture ──────────────────────────────────────────────────────── */
+.cam-wrap {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cam-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cam-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 40px solid rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cam-frame {
+  width: 100%;
+  height: 100%;
+  border: 2px dashed #fff;
+  border-radius: 4px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.2);
+}
+.cam-shutter {
+  position: absolute;
+  bottom: 1.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: rgba(255,255,255,0.3);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.cam-shutter:active { transform: scale(0.9); background: #fff; }
+
+.cam-controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  padding: 1rem 0;
+}
+.cam-preview {
+  width: 100%;
+  border-radius: var(--radius);
+  max-height: 300px;
+  object-fit: contain;
+}
+
 /* ── Action row (admin table) ────────────────────────────────────────────── */
 .action-row { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
 

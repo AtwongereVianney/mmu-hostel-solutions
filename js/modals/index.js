@@ -47,6 +47,7 @@ function modalContent() {
     case 'addManager':    return modalAddManager();
     case 'editManager':   return modalEditManager();
     case 'delManagerConf': return modalDelManager();
+    case 'camera':        return modalCamera();
     default:              return '';
   }
 }
@@ -127,7 +128,12 @@ function modalHostelForm(isEdit) {
              <div class="text-xs text-gray-500 mt-2">Click to change photo</div>`
           : `<div class="text-4xl mb-2">📷</div>
              <div class="text-sm text-gray-600 font-semibold">Click or drag &amp; drop to upload</div>
-             <div class="text-xs text-gray-400 mt-1">JPEG · PNG · WebP · Max 2 MB</div>`}
+             <div class="text-xs text-gray-400 mt-1">JPEG · PNG · WebP · Max 2 MB</div>
+             <div class="mt-3">
+               <button type="button" onclick="event.stopPropagation(); App.openCamera()" class="btn-out btn-sm" style="border-color:var(--g);color:var(--g)">
+                 📸 Take Photo with Camera
+               </button>
+             </div>`}
       </div>
       <input type="file" id="imgFile" accept="image/jpeg,image/png,image/gif,image/webp"
              class="hidden" onchange="App.handleImgUpload(this)"/>
@@ -313,6 +319,11 @@ function modalRoomForm(isEdit) {
       </div>
       <input type="file" id="rImg" accept="image/jpeg,image/png,image/gif,image/webp" class="text-sm w-full"
              onchange="App.onRoomImagePick(event)"/>
+      <div class="mt-2">
+        <button type="button" onclick="App.openCamera('room')" class="btn-out btn-sm" style="border-color:var(--g);color:var(--g)">
+          📸 Take Photo with Camera
+        </button>
+      </div>
       ${pending ? `<button type="button" onclick="App.clearRoomImagePick()" class="mt-1 text-xs font-semibold text-red-600 hover:underline">Remove selected photo</button>` : ''}
     </div>
     <div class="grid md:grid-cols-2 gap-4">
@@ -865,6 +876,53 @@ function modalDelManager() {
               style="background:#dc2626">
         🗑 Yes, Delete Account
       </button>
+    </div>
+  </div>`;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CAMERA CAPTURE
+──────────────────────────────────────────────────────────────────────────── */
+function modalCamera() {
+  const { isCaptured, capturedImg } = state;
+  const title = isCaptured ? 'Confirm Photo' : 'Capture Photo';
+  
+  return `
+  <div class="p-5 space-y-4">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-g text-lg font-bold">📸 ${title}</h3>
+      <button onclick="App.stopCamera()" class="text-gray-400 hover:text-gray-600">✕</button>
+    </div>
+
+    ${!isCaptured ? `
+      <div class="cam-wrap bg-black">
+        <video id="camVideo" autoplay playsinline class="cam-video"></video>
+        <div class="cam-overlay">
+          <div class="cam-frame"></div>
+        </div>
+        <button onclick="App.capturePhoto()" class="cam-shutter" title="Take Photo"></button>
+      </div>
+      <div class="text-center text-xs text-gray-400 mt-2">
+        Center the hostel within the frame and click the shutter.
+      </div>
+    ` : `
+      <div class="bg-gray-100 rounded-xl overflow-hidden">
+        <img src="${capturedImg}" class="cam-preview" alt="Captured Photo"/>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="App.setState({ isCaptured: false, capturedImg: null })" class="btn-out flex-1">
+          🔄 Retake
+        </button>
+        <button onclick="App.doApplyCapture()" class="btn-g flex-1">
+          ✅ Use this Photo
+        </button>
+      </div>
+    `}
+
+    <canvas id="camCanvas" width="1600" height="1200" class="hidden"></canvas>
+    
+    <div class="flex justify-center mt-2">
+      <button onclick="App.stopCamera()" class="text-sm text-gray-500 hover:underline">Cancel</button>
     </div>
   </div>`;
 }

@@ -40,7 +40,7 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
       },
     };
 
-    if (data && (method === 'POST' || method === 'PUT')) {
+    if (data && (['POST', 'PUT', 'DELETE'].includes(method))) {
       options.body = JSON.stringify(data);
     }
 
@@ -116,6 +116,26 @@ export async function updateUserAccess(id, payload = {}) {
 
 export async function deleteUser(id) {
   return apiRequest('users', 'DELETE', { id });
+}
+
+export async function deleteHostel(id) {
+  return apiRequest('hostels', 'DELETE', { id });
+}
+
+export async function deleteBooking(id) {
+  return apiRequest('bookings', 'DELETE', { id });
+}
+
+export async function deleteRole(id) {
+  return apiRequest('roles', 'DELETE', { id });
+}
+
+export async function deletePermission(id) {
+  return apiRequest('permissions', 'DELETE', { id });
+}
+
+export async function deleteRoom(id) {
+  return apiRequest('rooms', 'DELETE', { id });
 }
 
 

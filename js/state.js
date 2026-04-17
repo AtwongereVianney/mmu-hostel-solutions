@@ -78,6 +78,11 @@ export const state = {
   pendingImg:  null,
   /** { dataUrl, base64, filename } after user picks a room photo in Add/Edit Room */
   pendingRoomImage: null,
+  /* camera capture staging */
+  camStream:    null,
+  camTarget:    'hostel',    // 'hostel' | 'room'
+  isCaptured:   false,
+  capturedImg:  null,
 
   /* feedback */
   toast:       null,         // { msg, type } or null
