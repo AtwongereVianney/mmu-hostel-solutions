@@ -165,14 +165,16 @@ async function secureSet(key, value) {
 /** Strip one-time API payloads (e.g. base64 room photos) before caching to localStorage */
 function hostelsForLocalStorage(hostels) {
   if (!Array.isArray(hostels)) return hostels;
-  return hostels.map(h => ({
-    ...h,
-    rooms: (h.rooms || []).map((r) => {
-      const copy = { ...r };
-      delete copy.image_upload;
-      return copy;
-    }),
-  }));
+  return hostels.map(h => {
+    const copy = { ...h };
+    delete copy.image_upload;
+    copy.rooms = (h.rooms || []).map((r) => {
+      const rCopy = { ...r };
+      delete rCopy.image_upload;
+      return rCopy;
+    });
+    return copy;
+  });
 }
 
 /* ── Public API ──────────────────────────────────────────────────────────── */

@@ -136,19 +136,19 @@ export function mapEmbedUrl(lat, lng) {
 
 /** Render hostel cover: real <img> if photo exists, fallback emoji block */
 export function hostelCoverHtml(hostel, cssClass = 'hostel-img') {
-  const src = safeImgSrc(hostel.image);
+  const src = safeImgSrc(hostel.image) || backendAssetImgUrl(hostel.image);
   if (src) {
-    return `<img src="${src}" class="${cssClass}" alt="${e(hostel.name)}" loading="lazy"/>`;
+    return `<img src="${e(src)}" class="${e(cssClass)}" alt="${e(hostel.name)}" loading="lazy"/>`;
   }
   return `<div class="hostel-emoji" style="background:linear-gradient(135deg,${e(hostel.color)}22,${e(hostel.color)}55)">${hostel.emoji ?? '🏠'}</div>`;
 }
 
 /** Tiny thumbnail used in admin table rows */
 export function hostelThumbnailHtml(hostel) {
-  const src = safeImgSrc(hostel.image);
+  const src = safeImgSrc(hostel.image) || backendAssetImgUrl(hostel.image);
   const base = 'width:3rem;height:3rem;object-fit:cover;border-radius:.5rem;';
   if (src) {
-    return `<img src="${src}" style="${base}" alt="${e(hostel.name)}" loading="lazy"/>`;
+    return `<img src="${e(src)}" style="${base}" alt="${e(hostel.name)}" loading="lazy"/>`;
   }
   return `<div style="${base}display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:${e(hostel.color)}22">${hostel.emoji ?? '🏠'}</div>`;
 }

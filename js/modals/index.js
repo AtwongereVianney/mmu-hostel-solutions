@@ -107,7 +107,7 @@ function modalAdminLogin() {
 function modalHostelForm(isEdit) {
   const h    = isEdit ? getHostel(state.modalData.hostelId) : null;
   const csrf = getCsrfToken();
-  const prev = state.pendingImg ?? (isEdit ? h?.image : null);
+  const prev = state.isImageRemoved ? null : (state.pendingImg ?? (isEdit ? h?.image : null));
 
   return `
   ${mHead(isEdit ? `Edit Hostel — ${h?.name ?? ''}` : 'Add New Hostel', isEdit ? '✏️' : '🏢')}
@@ -621,7 +621,7 @@ function modalBookingSlip() {
     ${room && h ? roomPreviewHtml(room, h, { compact: true }) : ''}
     <div class="slip-wrap">
       <div class="slip-header">
-        <div style="font-size:2rem">🏠</div>
+        ${h ? hostelThumbnailHtml(h) : '<div style="font-size:2rem">🏠</div>'}
         <div>
           <div style="font-size:1rem;font-weight:800">MMU Hostel Booking</div>
           <div style="font-size:.7rem;opacity:.75">Mountains of the Moon University · Fort Portal</div>

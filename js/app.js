@@ -70,14 +70,14 @@ window.App = Object.freeze({
   },
   setState(patch) { setState(patch); },
   openModal(name, data = {}) {
-    const patch = { modal: name, modalData: data };
+    const patch = { modal: name, modalData: data, isImageRemoved: false };
     if (name === 'addRoom' || name === 'editRoom') patch.pendingRoomImage = null;
     setState(patch);
   },
-  closeModal() { setState({ modal: null, pendingImg: null, pendingRoomImage: null }); },
+  closeModal() { setState({ modal: null, pendingImg: null, pendingRoomImage: null, isImageRemoved: false }); },
   handleOverlayClick(ev) {
     if (ev.target?.id === 'modal-overlay' && state.modal !== 'success')
-      setState({ modal: null, pendingImg: null, pendingRoomImage: null });
+      setState({ modal: null, pendingImg: null, pendingRoomImage: null, isImageRemoved: false });
   },
   requireAdmin() {
     if (!state.adminMode || !isAuthenticated()) {

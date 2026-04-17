@@ -527,15 +527,25 @@ export async function doAddHostel() {
     ? f.amen.split(',').map(a => sanitize(a.trim(), 30)).filter(Boolean)
     : ['Security', 'Water'];
 
-  hostels.push({
+  const hostel = {
     id: makeId(), name: f.name, gender: f.gender,
     distance: f.dist, description: f.desc || 'No description provided.',
-    image: state.pendingImg ?? null, emoji: '🏠', color: '#1a5c38',
+    emoji: '🏠', color: '#1a5c38',
     rating: f.rating || null,
     managerPhone: f.mgr || null,
     location: { address: f.addr, lat: f.lat, lng: f.lng },
     amenities, rooms: [],
-  });
+  };
+
+  if (state.pendingImg) {
+    hostel.image = state.pendingImg; // Set for immediate UI preview
+    hostel.image_upload = {
+      base64: state.pendingImg.startsWith('data:') ? state.pendingImg.split(',')[1] : state.pendingImg,
+      filename: `hostel_${Date.now()}.jpg`
+    };
+  }
+
+  hostels.push(hostel);
 
   await saveData();
   await auditLog('HOSTEL_CREATED', `Admin added hostel: ${f.name}`);
@@ -556,7 +566,6 @@ export async function doEditHostel() {
   Object.assign(h, {
     name: f.name, gender: f.gender, distance: f.dist,
     description: f.desc || h.description,
-    image: state.pendingImg !== null ? state.pendingImg : h.image,
     rating: f.rating || h.rating,
     managerPhone: f.mgr || h.managerPhone,
     location: { address: f.addr, lat: f.lat, lng: f.lng },
@@ -564,6 +573,17 @@ export async function doEditHostel() {
       ? f.amen.split(',').map(a => sanitize(a.trim(), 30)).filter(Boolean)
       : h.amenities,
   });
+
+  if (state.isImageRemoved) {
+    h.image = null;
+    h.delete_images = true; // Signal to backend
+  } else if (state.pendingImg) {
+    h.image = state.pendingImg; // Set for immediate UI preview
+    h.image_upload = {
+      base64: state.pendingImg.startsWith('data:') ? state.pendingImg.split(',')[1] : state.pendingImg,
+      filename: `hostel_${Date.now()}.jpg`
+    };
+  }
 
   await saveData();
   await auditLog('HOSTEL_UPDATED', `Admin updated hostel: ${f.name}`);
@@ -1111,6 +1131,7 @@ export function handleImgUpload(input) {
       if (errEl) { errEl.textContent = 'Invalid image data.'; errEl.classList.remove('hidden'); }
       return;
     }
+    state.isImageRemoved = false;
     state.pendingImg = b64;
     const drop = document.getElementById('imgDrop');
     if (drop) {
@@ -1134,6 +1155,7 @@ export function handleDrop(ev) {
 }
 
 export function clearImg() {
+  state.isImageRemoved = true;
   state.pendingImg = null;
   setState({});
 }
@@ -1229,6 +1251,7 @@ export function doApplyCapture() {
     state.pendingRoomImage = { dataUrl: b64, base64: b64.split(',')[1], filename: `capture_${Date.now()}.jpg` };
     // UI update for room modal is handled via reactive state.pendingRoomImage in modalRoomForm
   } else {
+    state.isImageRemoved = false;
     state.pendingImg = b64;
     const drop = document.getElementById('imgDrop');
     if (drop) {
