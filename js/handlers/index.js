@@ -270,6 +270,60 @@ export async function doDeleteManager(userId) {
   setState({});
 }
 
+export async function doEditManager() {
+  if (!(await ensureLiveAccessSync())) return;
+  const id    = parseInt(document.getElementById('eMgrId')?.value ?? '0', 10);
+  const name  = sanitize(document.getElementById('eMgrName')?.value?.trim() ?? '');
+  const email = (document.getElementById('eMgrEmail')?.value ?? '').trim().toLowerCase();
+  const phone = sanitize(document.getElementById('eMgrPhone')?.value?.trim() ?? '');
+  const roleId = parseInt(document.getElementById('eMgrRole')?.value ?? '0', 10) || null;
+  const pwd   = document.getElementById('eMgrPwd')?.value ?? '';
+
+  const errEl = document.getElementById('eMgrErr');
+  const btn   = document.getElementById('eMgrBtn');
+
+  if (!id)    { _fieldErr(errEl, 'Invalid manager.'); return; }
+  if (!name)  { _fieldErr(errEl, 'Full name is required.'); return; }
+  if (!email) { _fieldErr(errEl, 'Email is required.'); return; }
+  if (!validate('email', email)) { _fieldErr(errEl, 'Invalid email format.'); return; }
+  if (pwd && pwd.length < 6) { _fieldErr(errEl, 'New password must be at least 6 characters.'); return; }
+
+  // Collect permissions
+  const permissions = {};
+  (state.permissions || []).forEach(p => {
+    permissions[p.name] = !!document.getElementById(`eMgrPerm_${p.id}`)?.checked;
+  });
+  if (Object.keys(permissions).length === 0) {
+    ['view_hostels','edit_hostel','manage_rooms','view_bookings','manage_bookings'].forEach(k => {
+      permissions[k] = !!document.getElementById(`eMgrPermDef_${k}`)?.checked;
+    });
+  }
+
+  // Collect hostel assignments
+  const hostelNodes = document.getElementById('eMgrHostels')?.querySelectorAll('option:checked');
+  const assigned_hostel_ids = Array.from(hostelNodes || []).map(o => parseInt(o.value, 10)).filter(id => !isNaN(id));
+
+  if (btn) btn.disabled = true;
+  try {
+    const payload = { id, name, email, phone, role_id: roleId, permissions, assigned_hostel_ids };
+    if (pwd) payload.password = pwd;
+
+    const res = await updateUserAccess(id, payload);
+    if (!res || !res.success) {
+      _fieldErr(errEl, res?.error || 'Could not update manager.');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    await auditLog('USER_UPDATED', `Updated manager #${id} (${email})`);
+    showToast('Manager updated successfully.');
+    await ensureManagersLoaded(true);
+    setState({ modal: null, adminTab: 'managers' });
+  } catch (err) {
+    _fieldErr(errEl, 'Network error while saving.');
+    if (btn) btn.disabled = false;
+  }
+}
+
 
 export async function ensureManagersLoaded(force = false) {
   if (state.managersLoading) return;

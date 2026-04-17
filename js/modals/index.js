@@ -45,6 +45,7 @@ function modalContent() {
     case 'success':       return modalSuccess();
     case 'bookingSlip':   return modalBookingSlip();
     case 'addManager':    return modalAddManager();
+    case 'editManager':   return modalEditManager();
     default:              return '';
   }
 }
@@ -726,6 +727,101 @@ function modalAddManager() {
     <div class="flex gap-3 pt-2">
       <button onclick="App.closeModal()" class="btn-out flex-1">Cancel</button>
       <button id="mBtn" onclick="App.doAddManager()" class="btn-g flex-1">Create Account</button>
+    </div>
+  </div>`;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   EDIT MANAGER (HOSTEL OWNER)
+──────────────────────────────────────────────────────────────────────────── */
+function modalEditManager() {
+  const managerId = Number(state.modalData?.managerId);
+  const manager   = (state.managers || []).find(m => Number(m.id) === managerId);
+
+  if (!manager) {
+    return `
+    ${mHead('Edit Manager', '✏️')}
+    <div class="p-5 text-center text-gray-400">
+      <div class="text-4xl mb-2">🔍</div>
+      <p>Manager not found. Please close and try again.</p>
+      <button onclick="App.closeModal()" class="btn-out mt-4">Close</button>
+    </div>`;
+  }
+
+  if (!state.rolesLoaded && !state.rolesLoading)
+    setTimeout(() => window.App?.ensureRolesLoaded?.(), 0);
+  if (!state.permissionsLoaded && !state.permissionsLoading)
+    setTimeout(() => window.App?.ensurePermissionsLoaded?.(), 0);
+
+  const roleOptions = (state.roles || [])
+    .map(r => `<option value="${r.id}"${Number(manager.role_id) === r.id ? ' selected' : ''}>${e(r.name)}</option>`)
+    .join('');
+
+  const perms = manager.permissions || {};
+  const permOptions = (state.permissions || [])
+    .map(p => `<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="eMgrPerm_${p.id}"${perms[p.name] ? ' checked' : ''}> <span>${e(p.name)}</span></label>`)
+    .join('');
+
+  const assignedIds = (hostels || []).filter(h => Number(h.owner_id) === managerId).map(h => h.id);
+
+  return `
+  ${mHead('Edit Manager: ' + e(manager.name), '✏️')}
+  <div class="p-5 space-y-4 overflow-y-auto" style="max-height:78vh">
+    <input type="hidden" id="eMgrId" value="${managerId}">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="lbl">Full Name *</label>
+        <input id="eMgrName" type="text" maxlength="60" class="inp" value="${e(manager.name)}"/>
+      </div>
+      <div>
+        <label class="lbl">Email *</label>
+        <input id="eMgrEmail" type="email" maxlength="80" class="inp" value="${e(manager.email)}"/>
+      </div>
+      <div>
+        <label class="lbl">Phone</label>
+        <input id="eMgrPhone" type="tel" maxlength="20" class="inp" value="${e(manager.phone || '')}"/>
+      </div>
+      <div>
+        <label class="lbl">Role</label>
+        <select id="eMgrRole" class="inp">
+          <option value="">No specific role</option>
+          ${roleOptions}
+        </select>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="lbl">New Password <span class="text-xs text-gray-400 font-normal">(leave blank to keep current)</span></label>
+        <input id="eMgrPwd" type="password" maxlength="60" class="inp" placeholder="Leave blank to keep unchanged"/>
+      </div>
+    </div>
+
+    <div class="bg-gray-50 rounded-xl p-3">
+      <label class="lbl">Assign Hostels <span class="text-xs text-gray-500 font-normal">(Hold Ctrl/Cmd for multi-select)</span></label>
+      <select id="eMgrHostels" class="inp" multiple size="4" style="height:auto">
+        ${(hostels || []).map(h => `<option value="${h.id}"${assignedIds.includes(h.id) ? ' selected' : ''}>${e(h.name)}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="bg-gray-50 rounded-xl p-3">
+      <div class="text-xs font-semibold text-g mb-2">Permissions</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+        ${state.permissionsLoading
+          ? '<span class="text-gray-400 text-xs">Loading permissions...</span>'
+          : (permOptions || `
+            <label class="flex items-center gap-2"><input type="checkbox" id="eMgrPermDef_view_hostels"${perms.view_hostels ? ' checked' : ''}> <span>view_hostels</span></label>
+            <label class="flex items-center gap-2"><input type="checkbox" id="eMgrPermDef_edit_hostel"${perms.edit_hostel ? ' checked' : ''}> <span>edit_hostel</span></label>
+            <label class="flex items-center gap-2"><input type="checkbox" id="eMgrPermDef_manage_rooms"${perms.manage_rooms ? ' checked' : ''}> <span>manage_rooms</span></label>
+            <label class="flex items-center gap-2"><input type="checkbox" id="eMgrPermDef_view_bookings"${perms.view_bookings ? ' checked' : ''}> <span>view_bookings</span></label>
+            <label class="flex items-center gap-2"><input type="checkbox" id="eMgrPermDef_manage_bookings"${perms.manage_bookings ? ' checked' : ''}> <span>manage_bookings</span></label>
+          `)}
+      </div>
+    </div>
+
+    <div id="eMgrErr" class="err-txt hidden bg-red-50 p-2 rounded"></div>
+
+    <div class="flex gap-3 pt-2">
+      <button onclick="App.closeModal()" class="btn-out flex-1">Cancel</button>
+      <button id="eMgrBtn" onclick="App.doEditManager()" class="btn-g flex-1">💾 Save Changes</button>
     </div>
   </div>`;
 }
