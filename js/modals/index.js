@@ -681,11 +681,6 @@ function modalAddManager() {
       <input id="mPh" type="tel" maxlength="20" placeholder="+2567..." class="inp"/>
     </div>
 
-    <div>
-      <label class="lbl">Initial Password *</label>
-      <input id="mP" type="password" maxlength="40" placeholder="••••••••" class="inp"/>
-      <div class="text-[10px] text-gray-400 mt-1">Provide a temporary password for the owner.</div>
-    </div>
 
     <div>
       <label class="lbl">Role</label>
