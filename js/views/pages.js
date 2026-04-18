@@ -435,6 +435,7 @@ export function renderAdmin() {
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='permissions' ? 'active' : ''}" onclick="App.setState({ adminTab: 'permissions' }); App.ensurePermissionsLoaded();">🛡 Permissions</button>` : ''}
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='users' ? 'active' : ''}" onclick="App.setState({ adminTab: 'users' }); App.ensureUsersLoaded();">👤 Users</button>` : ''}
     ${(isSystemAdmin || can('view_users') || can('manage_users')) ? `<button class="tab-btn ${tab==='students' ? 'active' : ''}" onclick="App.setState({ adminTab: 'students' }); App.ensureUsersLoaded();">🎓 Students</button>` : ''}
+    <button class="tab-btn ${tab==='finances' ? 'active' : ''}" onclick="App.setState({ adminTab: 'finances' })">💰 Finances</button>
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.openModal('addManager', {})">➕ Add Users</button>` : ''}
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.go('security')">🔐 Security</button>` : ''}
   </div>
@@ -572,6 +573,83 @@ export function renderAdmin() {
     </div>` : '<p class="text-gray-400 text-sm text-center py-4">No bookings yet.</p>'}
   </div>
   ` : ''}
+
+  <!-- Finances Tab -->
+  ${tab === 'finances' ? (() => {
+    // Calculate global metrics
+    let totalPotential = 0, collectedFees = 0, expectedBalance = 0;
+    
+    const hostelData = visibleHostels.map(h => {
+      let hPot = 0, hCol = 0, hBal = 0;
+      h.rooms.forEach(r => {
+        const price = Number(r.price || 0);
+        const fee = Number(r.confirmationFee || 0);
+        hPot += price;
+        if (r.status === 'booked') {
+          hCol += fee;
+          hBal += (price - fee);
+        } else if (r.status === 'pending') {
+          // Pending usually means fee not yet confirmed, so we just track it as expected balance for now
+          // or we can count it as pending revenue. Let's add it to balance to be safe.
+          hBal += price;
+        }
+      });
+      totalPotential += hPot;
+      collectedFees += hCol;
+      expectedBalance += hBal;
+      
+      return { 
+        id: h.id, 
+        name: h.name, 
+        roomsCount: h.rooms.length, 
+        pot: hPot, 
+        col: hCol, 
+        bal: hBal,
+        expected: hCol + hBal
+      };
+    });
+
+    const expectedTotal = collectedFees + expectedBalance;
+
+    return `
+    <div class="mb-6">
+      <div class="text-g text-xl mb-4">Financial Overview</div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        ${[['Maximum Potential', totalPotential, 'text-gray-500'], ['Total Expected', expectedTotal, 'text-g'], ['Collected Fees', collectedFees, 'text-yellow-600'], ['Balance Due', expectedBalance, 'text-blue-600']].map(([l, v, c]) => `
+          <div class="bg-white rounded-xl shadow-card p-4">
+            <div class="text-xs text-gray-500 mb-1">${l}</div>
+            <div class="text-xl font-bold ${c}">${formatPrice(v)}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="bg-white rounded-xl shadow-card p-5">
+        <h3 class="text-g text-lg mb-3">Hostel Breakdown</h3>
+        ${hostelData.length === 0 ? '<p class="text-gray-400 text-sm">No hostels to display.</p>' : `
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="tbl-hd">
+              <tr><th>Hostel</th><th>Rooms</th><th>Potential</th><th>Collected</th><th>Balance</th><th>Total Expected</th></tr>
+            </thead>
+            <tbody>
+              ${hostelData.map(d => `
+                <tr class="tbl-row">
+                  <td class="font-semibold text-g">${e(d.name)}</td>
+                  <td>${d.roomsCount}</td>
+                  <td class="text-gray-500 text-sm">${formatPrice(d.pot)}</td>
+                  <td class="text-yellow-600 font-semibold text-sm">${formatPrice(d.col)}</td>
+                  <td class="text-blue-600 text-sm">${formatPrice(d.bal)}</td>
+                  <td class="text-g font-bold text-sm bg-gray-50">${formatPrice(d.expected)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        `}
+      </div>
+    </div>
+    `;
+  })() : ''}
 
   <!-- Managers Tab -->
   ${tab === 'managers' && state.adminMode ? `
