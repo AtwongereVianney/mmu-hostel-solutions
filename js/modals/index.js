@@ -75,7 +75,7 @@ function modalAdminLogin() {
   return `
   ${mHead('Login', '🔐')}
   <div class="p-5">
-    <div class="text-xs text-gray-400 mb-4">🛡 Protected by brute-force lockout &amp; CSRF token</div>
+    <!-- Security banner removed per request -->
     ${lk.locked ? `
     <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-center">
       <div class="text-red-600 font-bold text-sm">🔒 Account Temporarily Locked</div>
@@ -96,7 +96,7 @@ function modalAdminLogin() {
       <div id="lErr" class="err-txt hidden bg-red-50 p-2 rounded"></div>
       ${!lk.locked && left < 5 ? `<div class="text-yellow-600 text-xs">⚠️ ${left} attempt(s) remaining</div>` : ''}
       <button id="lBtn" onclick="App.doLogin()" ${lk.locked ? 'disabled' : ''} class="btn-g w-full">Sign In</button>
-      <p class="text-xs text-center text-gray-400">System Admin / Hostel Owner Login</p>
+      <!-- Login role hint removed per request -->
     </div>
   </div>`;
 }
