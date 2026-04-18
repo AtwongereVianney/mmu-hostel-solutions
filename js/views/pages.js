@@ -435,7 +435,7 @@ export function renderAdmin() {
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='permissions' ? 'active' : ''}" onclick="App.setState({ adminTab: 'permissions' }); App.ensurePermissionsLoaded();">🛡 Permissions</button>` : ''}
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='users' ? 'active' : ''}" onclick="App.setState({ adminTab: 'users' }); App.ensureUsersLoaded();">👤 Users</button>` : ''}
     ${(isSystemAdmin || can('view_users') || can('manage_users')) ? `<button class="tab-btn ${tab==='students' ? 'active' : ''}" onclick="App.setState({ adminTab: 'students' }); App.ensureUsersLoaded();">🎓 Students</button>` : ''}
-    <button class="tab-btn ${tab==='finances' ? 'active' : ''}" onclick="App.setState({ adminTab: 'finances' })">💰 Finances</button>
+    ${!isSystemAdmin ? `<button class="tab-btn ${tab==='finances' ? 'active' : ''}" onclick="App.setState({ adminTab: 'finances' })">💰 Finances</button>` : ''}
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.openModal('addManager', {})">➕ Add Users</button>` : ''}
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.go('security')">🔐 Security</button>` : ''}
   </div>
@@ -575,7 +575,7 @@ export function renderAdmin() {
   ` : ''}
 
   <!-- Finances Tab -->
-  ${tab === 'finances' ? (() => {
+  ${(tab === 'finances' && !isSystemAdmin) ? (() => {
     // Calculate global metrics
     let totalPotential = 0, collectedFees = 0, expectedBalance = 0;
     
