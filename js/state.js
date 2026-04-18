@@ -82,6 +82,8 @@ export const state = {
   /* camera capture staging */
   camStream:    null,
   camTarget:    'hostel',    // 'hostel' | 'room'
+  camReturnModal: null,      // Name of the modal to return to after capture
+  camReturnData:  {},        // Data of the modal to return to after capture
   isCaptured:   false,
   capturedImg:  null,
 

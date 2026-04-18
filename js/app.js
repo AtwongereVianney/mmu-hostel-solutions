@@ -16,7 +16,7 @@ import { ALLOWED_VIEWS } from './data.js';
 import { renderNav }  from './components/nav.js';
 import { renderToast, showToast } from './components/toast.js';
 import { renderHome } from './views/home.js';
-import { renderHostels, renderHostelDetail, renderMyBookings, renderStudentDashboard, renderAdmin, renderSecurity } from './views/pages.js';
+import { renderHostels, renderHostelDetail, renderMyBookings, renderStudentDashboard, renderAdmin, renderSecurity, renderProfile } from './views/pages.js';
 import { renderModal } from './modals/index.js';
 import {
   doLogin, doLogout,
@@ -29,10 +29,11 @@ import {
   doAddRoom, doEditRoom, doDelRoom, releaseRoom, confirmRoomPayment, resendStudentCredentials,
   onRoomImagePick, clearRoomImagePick,
   openBooking, bStep1, bStep2, confirmBooking, lookupBooking,
+  saveProfile,
   handleImgUpload, handleDrop, clearImg, previewMap, liveVal,
   toggleShortlist, downloadBookingSlip, setRating,
   openCamera, capturePhoto, doApplyCapture, stopCamera,
-  toggleHostelExpand,
+  toggleHostelExpand, doSearchHostels,
 } from './handlers/index.js';
 
 /* Render engine */
@@ -41,7 +42,7 @@ function render() {
   if (!root) return;
   const views = {
     home: renderHome, hostels: renderHostels, hostelDetail: renderHostelDetail,
-    admin: renderAdmin, myBookings: renderMyBookings, studentDashboard: renderStudentDashboard, security: renderSecurity,
+    admin: renderAdmin, myBookings: renderMyBookings, studentDashboard: renderStudentDashboard, security: renderSecurity, profile: renderProfile,
   };
   const viewFn = views[state.view] || renderHome;
   root.innerHTML = renderNav() +
@@ -74,10 +75,10 @@ window.App = Object.freeze({
     if (name === 'addRoom' || name === 'editRoom') patch.pendingRoomImage = null;
     setState(patch);
   },
-  closeModal() { setState({ modal: null, pendingImg: null, pendingRoomImage: null, isImageRemoved: false }); },
+  closeModal() { setState({ modal: null, pendingImg: null, pendingRoomImage: null, isImageRemoved: false, camReturnModal: null, camReturnData: {} }); },
   handleOverlayClick(ev) {
     if (ev.target?.id === 'modal-overlay' && state.modal !== 'success')
-      setState({ modal: null, pendingImg: null, pendingRoomImage: null, isImageRemoved: false });
+      setState({ modal: null, pendingImg: null, pendingRoomImage: null, isImageRemoved: false, camReturnModal: null, camReturnData: {} });
   },
   requireAdmin() {
     if (!state.adminMode || !isAuthenticated()) {
@@ -91,7 +92,7 @@ window.App = Object.freeze({
 
   /* ── Auth ────────────────────────────────────────────────────────────── */
   doLogin, logout: doLogout,
-  doAddManager, doUpdateUserStatus, doDeleteManager, doEditManager,
+  doAddManager, doUpdateUserStatus, doDeleteManager, doEditManager, saveProfile,
 
 
   ensureManagersLoaded, ensureRolesLoaded, ensurePermissionsLoaded, ensureUsersLoaded,
@@ -119,6 +120,7 @@ window.App = Object.freeze({
   doApplyCapture,        // ✅ Confirm captured photo
   stopCamera,            // ✕ Stop camera & close
   toggleHostelExpand,    // ↕ Expand/collapse hostel card
+  searchHostels: doSearchHostels, // 🔍 Intelligent search
 });
 
 window.Sec = Object.freeze({ sanitize });

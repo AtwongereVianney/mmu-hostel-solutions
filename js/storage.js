@@ -114,6 +114,10 @@ export async function updateUserAccess(id, payload = {}) {
   return apiRequest('users', 'PUT', { id, ...payload });
 }
 
+export async function saveUserProfile(id, payload) {
+  return apiRequest('users', 'PUT', { id, ...payload });
+}
+
 export async function deleteUser(id) {
   return apiRequest('users', 'DELETE', { id });
 }
