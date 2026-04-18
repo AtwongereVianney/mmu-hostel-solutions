@@ -85,7 +85,7 @@ function modalAdminLogin() {
     <div class="space-y-4">
       <div>
         <label class="lbl">Username or Email</label>
-        <input id="aU" type="text" maxlength="80" placeholder="admin or manager@email.com" class="inp"
+        <input id="aU" type="text" maxlength="80" class="inp"
                ${lk.locked ? 'disabled' : ''} onkeydown="if(event.key==='Enter') App.doLogin()"/>
       </div>
       <div>
