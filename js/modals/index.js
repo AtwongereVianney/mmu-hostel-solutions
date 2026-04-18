@@ -621,7 +621,7 @@ function modalBookingSlip() {
     ${room && h ? roomPreviewHtml(room, h, { compact: true }) : ''}
     <div class="slip-wrap">
       <div class="slip-header">
-        ${h ? hostelThumbnailHtml(h) : '<div style="font-size:2rem">🏠</div>'}
+        ${h ? hostelThumbnailHtml(h) : '<div style="width:3rem;height:3rem;background:#f3f4f6;border-radius:.5rem;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#9ca3af;text-align:center;padding:2px">No Image</div>'}
         <div>
           <div style="font-size:1rem;font-weight:800">MMU Hostel Booking</div>
           <div style="font-size:.7rem;opacity:.75">Mountains of the Moon University · Fort Portal</div>

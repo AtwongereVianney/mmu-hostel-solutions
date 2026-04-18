@@ -250,7 +250,6 @@ export async function loadData() {
       h.distance = h.distance ?? seed?.distance ?? '';
       const firstHostelImg = Array.isArray(h.images) && h.images.length ? h.images[0] : null;
       h.image = h.image ?? firstHostelImg ?? seed?.image ?? null;
-      h.emoji = h.emoji ?? seed?.emoji ?? '🏠';
       h.color = h.color ?? seed?.color ?? '#1a5c38';
       h.rating = (h.rating ?? seed?.rating ?? 0);
       h.location = h.location ?? seed?.location ?? { address: h.address ?? '', lat: '', lng: '' };

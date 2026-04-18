@@ -134,13 +134,15 @@ export function mapEmbedUrl(lat, lng) {
 
 /* ── HTML snippet builders ─────────────────────────────────────────────────── */
 
-/** Render hostel cover: real <img> if photo exists, fallback emoji block */
+/** Render hostel cover: real <img> if photo exists, fallback text block */
 export function hostelCoverHtml(hostel, cssClass = 'hostel-img') {
   const src = safeImgSrc(hostel.image) || backendAssetImgUrl(hostel.image);
   if (src) {
     return `<img src="${e(src)}" class="${e(cssClass)}" alt="${e(hostel.name)}" loading="lazy"/>`;
   }
-  return `<div class="hostel-emoji" style="background:linear-gradient(135deg,${e(hostel.color)}22,${e(hostel.color)}55)">${hostel.emoji ?? '🏠'}</div>`;
+  return `<div class="hostel-no-img" style="background:linear-gradient(135deg,${e(hostel.color || '#1a5c38')}11,${e(hostel.color || '#1a5c38')}22);display:flex;align-items:center;justify-content:center;min-height:160px">
+    <span class="text-xs text-gray-500 font-medium text-center px-4">No picture uploaded yet</span>
+  </div>`;
 }
 
 /** Tiny thumbnail used in admin table rows */
@@ -150,7 +152,9 @@ export function hostelThumbnailHtml(hostel) {
   if (src) {
     return `<img src="${e(src)}" style="${base}" alt="${e(hostel.name)}" loading="lazy"/>`;
   }
-  return `<div style="${base}display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:${e(hostel.color)}22">${hostel.emoji ?? '🏠'}</div>`;
+  return `<div style="${base}display:flex;align-items:center;justify-content:center;background:${e(hostel.color || '#1a5c38')}11;border:1px dashed #e5e7eb">
+    <span class="text-[8px] text-gray-400 leading-tight text-center px-1">No Image</span>
+  </div>`;
 }
 
 /** ── STAR RATING HTML ─────────────────────────────────────────────────────

@@ -49,10 +49,10 @@ export function renderHome() {
       <!-- Live Stats -->
       <div class="grid grid-cols-3 gap-3 flex-shrink-0">
         ${[['Available', s.a, '✅'], ['Hostels', hostels.length, '🏢'], ['Total Rooms', s.t, '🚪']].map(([l, v, ic]) => `
-          <div class="text-center bg-white bg-opacity-10 rounded-xl p-4 backdrop-blur-sm">
+          <div class="text-center bg-green-900 bg-opacity-30 rounded-xl p-4 backdrop-blur-sm border border-white border-opacity-10">
             <div class="text-2xl mb-1">${ic}</div>
             <div class="text-yellow-400 text-2xl font-bold">${v}</div>
-            <div class="text-green-400 text-sm font-semibold tracking-wide">${l}</div>
+            <div class="text-[#4ade80] text-xs font-bold tracking-widest uppercase">${l}</div>
           </div>`).join('')}
       </div>
     </div>

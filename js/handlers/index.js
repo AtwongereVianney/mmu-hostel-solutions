@@ -615,7 +615,7 @@ export async function doAddHostel() {
   const hostel = {
     id: makeId(), name: f.name, gender: f.gender,
     distance: f.dist, description: f.desc || 'No description provided.',
-    emoji: '🏠', color: '#1a5c38',
+    color: '#1a5c38',
     rating: f.rating || null,
     managerPhone: f.mgr || null,
     location: { address: f.addr, lat: f.lat, lng: f.lng },
@@ -1141,10 +1141,9 @@ export function downloadBookingSlip(bookingId) {
 <body>
   <div class="slip">
     <div class="slip-header">
-      <div style="font-size:2rem">🏠</div>
+      <div style="font-size:1.1rem;font-weight:800">🏠 MMU Hostel Booking</div>
       <div>
-        <div style="font-size:1.1rem;font-weight:800">MMU Hostel Booking</div>
-        <div style="font-size:.7rem;opacity:.75">Mountains of the Moon University · Fort Portal</div>
+        <div style="font-size:.7rem;opacity:.75;margin-top:.25rem">Mountains of the Moon University · Fort Portal</div>
       </div>
     </div>
     <div class="slip-body">

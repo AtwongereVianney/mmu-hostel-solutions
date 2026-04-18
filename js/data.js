@@ -57,7 +57,6 @@ export const SEED_HOSTELS = [
     description: 'Modern hall with Rwenzori mountain views, 24/7 security, Wi-Fi and clean water supply.',
     image: null,
     managerPhone: '0765958809',
-    emoji: '🏢',
     color: '#1a5c38',
     rating: 4.5,
     location: {
@@ -82,7 +81,6 @@ export const SEED_HOSTELS = [
     description: 'Quiet female-only hostel near the library, excellent study environment.',
     image: null,
     managerPhone: '0756188401',
-    emoji: '🏠',
     color: '#c9961a',
     rating: 4.2,
     location: {
@@ -105,7 +103,6 @@ export const SEED_HOSTELS = [
     description: 'Affordable male hostel with sports facilities and a friendly atmosphere.',
     image: null,
     managerPhone: '0765958809',
-    emoji: '🏗️',
     color: '#2d7a4f',
     rating: 3.8,
     location: {
