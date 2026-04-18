@@ -7,12 +7,16 @@
   "scripts": {
     "dev": "npx serve . --cors --listen 3000",
     "preview": "npx serve . --listen 3000",
-    "lint": "npx eslint js/**/*.js"
+    "lint": "npx eslint js/**/*.js",
+    "tw:build": "node_modules/.bin/tailwindcss -i ./css/tailwind.input.css -o ./css/tailwind.output.css --minify",
+    "tw:watch": "node_modules/.bin/tailwindcss -i ./css/tailwind.input.css -o ./css/tailwind.output.css --watch"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@tailwindcss/cli": "^4.2.2",
     "eslint": "^9.39.4",
-    "serve": "^14.2.0"
+    "serve": "^14.2.0",
+    "tailwindcss": "^4.2.2"
   },
   "engines": {
     "node": ">=18"
