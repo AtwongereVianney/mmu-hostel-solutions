@@ -64,9 +64,9 @@ export function renderHome() {
     <div class="grid md:grid-cols-4 gap-3 items-end">
       <div class="md:col-span-2">
         <label class="lbl">Search Hostel</label>
-        <input class="inp" maxlength="80" placeholder="Hostel name…"
+        <input id="homeSearchInput" class="inp" maxlength="80" placeholder="Type full hostel name, then press Enter or click Search"
                value="${e(fSearch)}"
-               oninput="App.setState({ fSearch: Sec.sanitize(this.value, 80) })"/>
+               onkeydown="if(event.key==='Enter'){ App.setState({ fSearch: Sec.sanitize(this.value, 80) }); App.searchHostels(); }"/>
       </div>
       <div>
         <label class="lbl">Gender</label>
@@ -75,7 +75,7 @@ export function renderHome() {
         </select>
       </div>
       <div>
-        <button onclick="App.go('hostels')" class="btn-g w-full">Search →</button>
+        <button onclick="App.setState({ fSearch: Sec.sanitize(document.getElementById('homeSearchInput')?.value || '', 80) }); App.searchHostels();" class="btn-g w-full">Search →</button>
       </div>
     </div>
 

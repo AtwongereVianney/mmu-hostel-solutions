@@ -11,7 +11,7 @@
 'use strict';
 
 import { state, setState, hostels, bookings, setBookings } from '../state.js';
-import { saveData, loadData, createUser, updateUserStatus, deleteUser, deleteHostel, deleteRoom, deleteBooking, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials }  from '../storage.js';
+import { saveData, loadData, createUser, updateUserStatus, deleteUser, deleteHostel, deleteRoom, deleteBooking, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, saveUserProfile, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials }  from '../storage.js';
 
 import { showToast } from '../components/toast.js';
 import {
@@ -156,6 +156,58 @@ export async function doLogout() {
   await auditLog('ADMIN_LOGOUT', 'Admin logged out');
   setState({ adminMode: false, adminUser: '', userId: null, userEmail: '', userRole: '', userPermissions: {}, assignedHostelIds: [], view: 'home' });
   showToast('Logged out successfully.');
+}
+
+/**
+ * Save user profile changes (name, email, phone, password)
+ */
+export async function saveProfile() {
+  const name  = sanitize(document.getElementById('profName')?.value?.trim() ?? '', 100);
+  const email = (document.getElementById('profEmail')?.value ?? '').trim().toLowerCase();
+  const phone = sanitize(document.getElementById('profPhone')?.value?.trim() ?? '', 20);
+  const pwd   = document.getElementById('profPass')?.value ?? '';
+
+  if (!name)  { showToast('Full name is required.', 'error'); return; }
+  if (!email) { showToast('Email address is required.', 'error'); return; }
+  if (!validate('email', email)) { showToast('Invalid email format.', 'error'); return; }
+  if (pwd && pwd.length < 6) { showToast('New password must be at least 6 characters.', 'error'); return; }
+
+  const btn = document.querySelector('button[onclick="App.saveProfile()"]');
+  if (btn) btn.disabled = true;
+
+  try {
+    const payload = { name, email, phone };
+    if (pwd) payload.password = pwd;
+
+    const res = await saveUserProfile(state.userId, payload);
+    if (!res || !res.success) {
+      showToast(res?.error || 'Could not save profile changes.', 'error');
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    await auditLog('PROFILE_UPDATED', `User #${state.userId} updated profile particulars.`);
+    
+    // Update local state
+    setState({
+      adminUser: name,
+      userEmail: email,
+      // If we added userPhone to state, we'd update it here too.
+    });
+
+    showToast('Profile updated successfully!');
+    if (pwd) showToast('Password changed.', 'info');
+    
+    // Refresh user data in case of other changes
+    await ensureUsersLoaded(true);
+    
+    // Redirect home or stay on profile
+    App.go('home');
+    
+  } catch (err) {
+    showToast('Network error while saving profile.', 'error');
+    if (btn) btn.disabled = false;
+  }
 }
 
 export async function doAddManager() {
@@ -482,6 +534,39 @@ export async function doAssignHostelManager(hostelId) {
   await auditLog('HOSTEL_OWNER_ASSIGNED', `Assigned hostel #${hostelId} to manager #${ownerId}`);
   setState({});
   showToast('Hostel assigned to manager.');
+}
+
+/* ── Search ────────────────────────────────────────────────────────────── */
+/**
+ * Intelligent search: redirects to detail page if a single/exact match is found,
+ * otherwise shows the list with filters applied.
+ */
+export function doSearchHostels() {
+  const query = (state.fSearch || '').trim().toLowerCase();
+  if (!query) {
+    App.go('hostels');
+    return;
+  }
+
+  // Find matches using simple case-insensitive substring search
+  const matches = hostels.filter(h => {
+    const nameMatch = h.name.toLowerCase().includes(query);
+    const genderOk = state.fGender === 'All' || h.gender === state.fGender || h.gender === 'Mixed';
+    return nameMatch && genderOk;
+  });
+
+  if (matches.length === 1) {
+    // Single match found – go directly to details
+    App.go('hostelDetail', { selectedHostelId: matches[0].id });
+    showToast(`Found: ${matches[0].name}`, 'success');
+  } else if (matches.length > 1) {
+    // Multiple matches – go to list view with filter applied
+    App.go('hostels');
+  } else {
+    // No matches
+    showToast(`No hostels found matching "${query}"`, 'warn');
+    App.go('hostels');
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -1138,6 +1223,7 @@ export function handleImgUpload(input) {
       drop.innerHTML = `<img src="${b64}" style="max-height:160px;border-radius:.5rem;margin:0 auto;display:block;" alt="Preview"/>
         <div class="text-xs text-gray-500 mt-2">Click to change photo</div>`;
     }
+    setState({}); // Reactive update
   };
   reader.readAsDataURL(file);
 }
@@ -1194,9 +1280,13 @@ export async function openCamera(target = 'hostel') {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
     });
+    const prevModal = state.modal;
+    const prevData  = { ...state.modalData };
     setState({
       modal: 'camera',
       camTarget: target,
+      camReturnModal: prevModal,
+      camReturnData: prevData,
       camStream: stream,
       isCaptured: false,
       capturedImg: null
@@ -1258,17 +1348,24 @@ export function doApplyCapture() {
       drop.innerHTML = `<img src="${b64}" style="max-height:160px;border-radius:.5rem;margin:0 auto;display:block;" alt="Preview"/>
         <div class="text-xs text-gray-500 mt-2">Click to change photo</div>`;
     }
+    setState({}); // Re-render target modal
   }
   showToast('Photo captured!', 'success');
 }
 
 export function stopCamera() {
+  const returnModal = state.camReturnModal;
+  const returnData  = state.camReturnData;
+
   if (state.camStream) {
     state.camStream.getTracks().forEach(track => track.stop());
   }
   setState({
-    modal: (state.modal === 'camera') ? null : state.modal,
+    modal: returnModal,
+    modalData: returnData,
     camStream: null,
+    camReturnModal: null,
+    camReturnData: {},
     isCaptured: false,
     capturedImg: null
   });

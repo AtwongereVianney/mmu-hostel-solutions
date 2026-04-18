@@ -28,8 +28,10 @@ export function renderHostels() {
   const { fGender, fSearch, fSemester } = state;
 
   const filtered = hostels.filter(h => {
+    const query = (fSearch || '').trim().toLowerCase();
     const gOk = fGender === 'All' || h.gender === fGender || h.gender === 'Mixed';
-    const qOk = !fSearch || h.name.toLowerCase().includes(fSearch.toLowerCase());
+    // Substring match — only applied when the user has typed something and submitted
+    const qOk = !query || h.name.toLowerCase().includes(query);
     return gOk && qOk;
   });
 
@@ -46,9 +48,9 @@ export function renderHostels() {
     <div class="grid md:grid-cols-3 gap-4 items-end mb-4">
       <div>
         <label class="lbl">Search</label>
-        <input class="inp" maxlength="80" placeholder="Hostel name…"
+        <input id="hostelSearchInput" class="inp" maxlength="80" placeholder="Hostel name… (press Enter or click Search)"
                value="${e(fSearch)}"
-               oninput="App.setState({ fSearch: Sec.sanitize(this.value, 80) })"/>
+               onkeydown="if(event.key==='Enter'){ App.setState({ fSearch: Sec.sanitize(this.value, 80) }); App.searchHostels(); }"/>
       </div>
       <div>
         <label class="lbl">Gender</label>
@@ -56,9 +58,11 @@ export function renderHostels() {
           ${['All','Male','Female','Mixed'].map(g => `<option value="${g}"${fGender===g?' selected':''}>${g}</option>`).join('')}
         </select>
       </div>
-      <div>
-        <button onclick="App.setState({ fGender:'All', fSearch:'', fSemester:'All' })"
-                class="btn-out w-full">↺ Reset Filters</button>
+      <div style="display:flex;gap:.5rem;">
+        <button onclick="App.setState({ fSearch: Sec.sanitize(document.getElementById('hostelSearchInput')?.value || '', 80) }); App.searchHostels();"
+                class="btn-g" style="flex:1">🔍 Search</button>
+        <button onclick="(function(){ var el=document.getElementById('hostelSearchInput'); if(el) el.value=''; App.setState({ fGender:'All', fSearch:'', fSemester:'All' }); })()"
+                class="btn-out">↺ Reset</button>
       </div>
     </div>
   </div>
@@ -836,5 +840,77 @@ export function renderSecurity() {
         </tbody>
       </table>
     </div>` : '<p class="text-gray-400 text-sm text-center py-4">No audit entries yet.</p>'}
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   USER PROFILE
+══════════════════════════════════════════════════════════════════════════ */
+export function renderProfile() {
+  const { adminUser, userEmail, userId, userRole } = state;
+  const user = (state.users || []).find(u => Number(u.id) === Number(userId)) || { name: adminUser, email: userEmail, phone: '' };
+
+  return `
+  <div class="flex items-center gap-3 mb-5 flex-wrap">
+    <button onclick="App.go('home')" class="text-g text-sm hover:underline">← Home</button>
+    <h2 class="text-g text-2xl">User Profile</h2>
+  </div>
+
+  <div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-2xl shadow-card overflow-hidden">
+      <div class="bg-g p-8 text-center" style="background: linear-gradient(135deg, var(--g) 0%, #064e3b 100%)">
+        <div class="w-24 h-24 rounded-full bg-yellow-400 mx-auto mb-4 flex items-center justify-center text-green-900 text-3xl font-bold shadow-lg border-4 border-white border-opacity-20">
+          ${(user.name || 'U').charAt(0).toUpperCase()}
+        </div>
+        <h3 class="text-white text-xl font-bold">${e(user.name || 'User')}</h3>
+        <p class="text-green-100 text-sm opacity-80 uppercase tracking-wider font-semibold">${e(userRole || 'User')}</p>
+      </div>
+
+      <div class="p-6 md:p-10">
+        <div class="space-y-6">
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <label class="lbl">Full Name</label>
+              <input type="text" id="profName" class="inp" value="${e(user.name || '')}" placeholder="Your full name" maxlength="100" />
+            </div>
+            <div>
+              <label class="lbl">Phone Number</label>
+              <input type="tel" id="profPhone" class="inp" value="${e(user.phone || '')}" placeholder="e.g. 0700000000" maxlength="20" />
+            </div>
+          </div>
+
+          <div>
+            <label class="lbl">Email Address</label>
+            <input type="email" id="profEmail" class="inp" value="${e(user.email || '')}" placeholder="your@email.com" maxlength="100" />
+            <p class="text-xs text-gray-400 mt-1">Used for login and hostle booking notifications.</p>
+          </div>
+
+          <div class="pt-6 border-t border-gray-100">
+            <h4 class="text-g font-bold mb-4 flex items-center gap-2">
+              <span class="text-lg">🔐</span> Security Settings
+            </h4>
+            <div>
+              <label class="lbl">New Password</label>
+              <input type="password" id="profPass" class="inp" placeholder="Leave blank to keep current" maxlength="50" />
+              <p class="text-xs text-gray-400 mt-2">Update your password only if needed. Use at least 6 characters for better security.</p>
+            </div>
+          </div>
+
+          <div class="pt-6">
+            <button onclick="App.saveProfile()" class="btn-g w-full py-4 text-lg font-bold shadow-hover transition-all flex items-center justify-center gap-2">
+              <span>💾</span> Save Profile Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex gap-3 items-start">
+      <span class="text-xl">💡</span>
+      <div class="text-sm text-yellow-800">
+        <p class="font-bold mb-1">Privacy Note</p>
+        <p>Your particulars are only visible to the university administration and relevant hostel managers when you make a booking.</p>
+      </div>
+    </div>
   </div>`;
 }
