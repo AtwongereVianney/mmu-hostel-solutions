@@ -828,7 +828,7 @@ export function renderAdmin() {
       <form onsubmit="App.doUpdateDeveloperContact(event)" class="space-y-3">
         <div>
           <label class="lbl">Contact Details</label>
-          <input id="devContact" class="inp" value="${e(state.developerContact || '')}" placeholder="e.g. MMU Tech Team | devSupport@mmu.ac.ug | 0700" required />
+          <input id="devContact" class="inp" value="${e(state.developerContact || '')}" placeholder="e.g. MMU Tech Team | devSupport@mmu.ac.ug | 0756188401" required />
         </div>
         <button type="submit" class="btn-g w-full">Save Settings</button>
       </form>

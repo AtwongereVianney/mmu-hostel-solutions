@@ -222,7 +222,7 @@ export async function loadData() {
   }
 
   // Settings
-  const settingsObj = await secureGet(STORAGE_KEYS.settings, { developerContact: 'MMU Tech Team: devSupport@mmu.ac.ug | 0700000000' });
+  const settingsObj = await secureGet(STORAGE_KEYS.settings, { developerContact: 'MMU Tech Team: devSupport@mmu.ac.ug | 0756188401' });
   import('./state.js').then(module => {
     module.setState({ developerContact: settingsObj.developerContact });
   });
