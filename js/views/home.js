@@ -52,7 +52,7 @@ export function renderHome() {
           <div class="text-center bg-white bg-opacity-10 rounded-xl p-4 backdrop-blur-sm">
             <div class="text-2xl mb-1">${ic}</div>
             <div class="text-yellow-400 text-2xl font-bold">${v}</div>
-            <div class="text-green-200 text-xs">${l}</div>
+            <div class="text-white text-sm font-semibold tracking-wide">${l}</div>
           </div>`).join('')}
       </div>
     </div>
