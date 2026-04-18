@@ -91,6 +91,7 @@ export const state = {
   expandedHostels: [],       // array of hostel IDs currently expanded in dashboard
   toast:       null,         // { msg, type } or null
   successMsg:  '',
+  developerContact: '',
 };
 
 /* ── Render callback registry ────────────────────────────────────────────── */

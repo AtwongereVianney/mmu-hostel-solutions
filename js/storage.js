@@ -27,6 +27,7 @@ const API_BASE_URL = getApiBaseUrl();
 const STORAGE_KEYS = Object.freeze({
   hostels:  'mmu_hostels_v3',
   bookings: 'mmu_bookings_v3',
+  settings: 'mmu_settings_v3',
 });
 
 /* ── API helpers ────────────────────────────────────────────────────────── */
@@ -220,6 +221,12 @@ export async function loadData() {
     bookings = await secureGet(STORAGE_KEYS.bookings, []);
   }
 
+  // Settings
+  const settingsObj = await secureGet(STORAGE_KEYS.settings, { developerContact: 'MMU Tech Team: devSupport@mmu.ac.ug | 0700000000' });
+  import('./state.js').then(module => {
+    module.setState({ developerContact: settingsObj.developerContact });
+  });
+
   // Data Migration: Ensure existing hostels get the new managerPhone from seeds if missing
   if (Array.isArray(hostels)) {
     hostels = hostels.map(h => {
@@ -284,4 +291,11 @@ export async function saveData() {
     console.warn('Failed to sync with API:', error);
     // Data is still saved locally, will sync when connection is restored
   }
+}
+
+/** Save System Settings to local storage */
+export async function saveSystemSettings(settings) {
+  let current = await secureGet(STORAGE_KEYS.settings, {});
+  current = { ...current, ...settings };
+  await secureSet(STORAGE_KEYS.settings, current);
 }

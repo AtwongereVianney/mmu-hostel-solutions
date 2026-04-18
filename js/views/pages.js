@@ -437,6 +437,7 @@ export function renderAdmin() {
     ${(isSystemAdmin || can('view_users') || can('manage_users')) ? `<button class="tab-btn ${tab==='students' ? 'active' : ''}" onclick="App.setState({ adminTab: 'students' }); App.ensureUsersLoaded();">🎓 Students</button>` : ''}
     ${!isSystemAdmin ? `<button class="tab-btn ${tab==='finances' ? 'active' : ''}" onclick="App.setState({ adminTab: 'finances' })">💰 Finances</button>` : ''}
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.openModal('addManager', {})">➕ Add Users</button>` : ''}
+    ${isSystemAdmin ? `<button class="tab-btn ${tab==='settings' ? 'active' : ''}" onclick="App.setState({ adminTab: 'settings' })">⚙️ Settings</button>` : ''}
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.go('security')">🔐 Security</button>` : ''}
   </div>
 
@@ -813,6 +814,25 @@ export function renderAdmin() {
         </div>
       </details>
     `).join('') : ''}
+  </div>
+  ` : ''}
+
+  <!-- Settings Tab -->
+  ${tab === 'settings' && isSystemAdmin ? `
+  <div class="bg-white rounded-xl shadow-card p-5">
+    <h3 class="text-g text-lg mb-4">System Settings</h3>
+    
+    <div class="max-w-md border rounded-xl p-4 mb-4">
+      <h4 class="font-bold text-gray-700 mb-2">Developer Contact Information</h4>
+      <p class="text-xs text-gray-500 mb-3">This information will be displayed in the footer of the home page.</p>
+      <form onsubmit="App.doUpdateDeveloperContact(event)" class="space-y-3">
+        <div>
+          <label class="lbl">Contact Details</label>
+          <input id="devContact" class="inp" value="${e(state.developerContact || '')}" placeholder="e.g. MMU Tech Team | devSupport@mmu.ac.ug | 0700" required />
+        </div>
+        <button type="submit" class="btn-g w-full">Save Settings</button>
+      </form>
+    </div>
   </div>
   ` : ''}`;
 }

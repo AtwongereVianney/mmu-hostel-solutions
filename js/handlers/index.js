@@ -11,7 +11,7 @@
 'use strict';
 
 import { state, setState, hostels, bookings, setBookings } from '../state.js';
-import { saveData, loadData, createUser, updateUserStatus, deleteUser, deleteHostel, deleteRoom, deleteBooking, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, saveUserProfile, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials }  from '../storage.js';
+import { saveData, loadData, createUser, updateUserStatus, deleteUser, deleteHostel, deleteRoom, deleteBooking, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, saveUserProfile, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials, saveSystemSettings }  from '../storage.js';
 
 import { showToast } from '../components/toast.js';
 import {
@@ -1377,4 +1377,17 @@ export function toggleHostelExpand(id) {
     ? current.filter(x => x !== id)
     : [...current, id];
   setState({ expandedHostels: expanded });
+}
+
+/* ── Settings ────────────────────────────────────────────────────────────── */
+export async function doUpdateDeveloperContact(ev) {
+  ev.preventDefault();
+  if (state.userRole !== 'admin') return;
+  const f = { dev_contact: document.getElementById('devContact').value.trim() };
+  if (!f.dev_contact) { showToast('Contact cannot be empty', 'error'); return; }
+  
+  await saveSystemSettings({ developerContact: f.dev_contact });
+  setState({ developerContact: f.dev_contact });
+  showToast('Settings saved successfully.', 'success');
+  await auditLog('SETTINGS_UPDATE', 'System developer contact updated');
 }

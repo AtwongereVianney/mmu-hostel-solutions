@@ -34,6 +34,7 @@ import {
   toggleShortlist, downloadBookingSlip, setRating,
   openCamera, capturePhoto, doApplyCapture, stopCamera,
   toggleHostelExpand, doSearchHostels,
+  doUpdateDeveloperContact,
 } from './handlers/index.js';
 
 /* Render engine */
@@ -121,6 +122,7 @@ window.App = Object.freeze({
   stopCamera,            // ✕ Stop camera & close
   toggleHostelExpand,    // ↕ Expand/collapse hostel card
   searchHostels: doSearchHostels, // 🔍 Intelligent search
+  doUpdateDeveloperContact,
 });
 
 window.Sec = Object.freeze({ sanitize });
