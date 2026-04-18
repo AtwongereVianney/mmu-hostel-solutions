@@ -133,6 +133,5 @@ export function renderHome() {
   <!-- System Developers Footer Strip -->
   <div class="mt-8 text-center text-xs text-gray-500 pb-4">
     <p>System Developers: <b>${e(state.developerContact || 'Not Specified')}</b></p>
-    <p class="mt-1">&copy; ${new Date().getFullYear()} Mountains of the Moon University. All rights reserved.</p>
   </div>`;
 }
