@@ -193,9 +193,10 @@ export async function loadData() {
   let bookings = null;
 
   try {
-    const [hostelsData, bookingsData] = await Promise.all([
+    const [hostelsData, bookingsData, settingsData] = await Promise.all([
       apiRequest('hostels'),
-      apiRequest('bookings')
+      apiRequest('bookings'),
+      apiRequest('settings')
     ]);
 
     if (Array.isArray(hostelsData) && hostelsData.length > 0) {
@@ -208,6 +209,13 @@ export async function loadData() {
       bookings = bookingsData;
       // Cache in localStorage for offline access
       await secureSet(STORAGE_KEYS.bookings, bookings);
+    }
+
+    if (settingsData && settingsData.success && settingsData.settings) {
+      const serverSettings = settingsData.settings;
+      if (serverSettings.developerContact) {
+        await secureSet(STORAGE_KEYS.settings, { developerContact: serverSettings.developerContact });
+      }
     }
   } catch (error) {
     console.warn('Failed to load from API, using localStorage:', error);
@@ -293,9 +301,16 @@ export async function saveData() {
   }
 }
 
-/** Save System Settings to local storage */
+/** Save System Settings to local storage and DB */
 export async function saveSystemSettings(settings) {
   let current = await secureGet(STORAGE_KEYS.settings, {});
   current = { ...current, ...settings };
   await secureSet(STORAGE_KEYS.settings, current);
+
+  // Sync to backend DB
+  try {
+    await apiRequest('settings', 'POST', settings);
+  } catch (err) {
+    console.warn('Failed to sync settings to API:', err);
+  }
 }
