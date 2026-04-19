@@ -576,9 +576,11 @@ export function renderAdmin() {
   ` : ''}
 
   <!-- Finances Tab -->
+  <!-- Finances Tab -->
   ${(tab === 'finances' && !isSystemAdmin) ? (() => {
     // Calculate global metrics
     let totalPotential = 0, collectedFees = 0, expectedBalance = 0;
+    const roomDetails = [];
     
     const hostelData = visibleHostels.map(h => {
       let hPot = 0, hCol = 0, hBal = 0;
@@ -586,13 +588,38 @@ export function renderAdmin() {
         const price = Number(r.price || 0);
         const fee = Number(r.confirmationFee || 0);
         hPot += price;
+
+        // Find associated booking for credentials
+        const b = visibleBookings.find(bx => Number(bx.hostelId) === Number(h.id) && Number(bx.roomId) === Number(r.id));
+        
+        let earnings = 0;
+        let balance = price;
+        
         if (r.status === 'booked') {
+          earnings = fee;
+          balance = price - fee;
           hCol += fee;
-          hBal += (price - fee);
+          hBal += balance;
         } else if (r.status === 'pending') {
-          // Pending usually means fee not yet confirmed, so we just track it as expected balance for now
-          // or we can count it as pending revenue. Let's add it to balance to be safe.
           hBal += price;
+        }
+
+        if (r.status !== 'available') {
+            roomDetails.push({
+                hostelName: h.name,
+                roomNumber: r.number,
+                studentName: b?.studentName || r.bookedBy || 'Unknown',
+                regNo: b?.regNo || r.regNo || '—',
+                course: b?.course || '—',
+                email: b?.email || '—',
+                phone: b?.phone || '—',
+                year: b?.year || '—',
+                semester: b?.semester || '—',
+                price,
+                earnings,
+                balance,
+                status: r.status
+            });
         }
       });
       totalPotential += hPot;
@@ -613,19 +640,21 @@ export function renderAdmin() {
     const expectedTotal = collectedFees + expectedBalance;
 
     return `
-    <div class="mb-6">
-      <div class="text-g text-xl mb-4">Financial Overview</div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        ${[['Maximum Potential', totalPotential, 'text-gray-500'], ['Total Expected', expectedTotal, 'text-g'], ['Collected Fees', collectedFees, 'text-yellow-600'], ['Balance Due', expectedBalance, 'text-blue-600']].map(([l, v, c]) => `
-          <div class="bg-white rounded-xl shadow-card p-4">
-            <div class="text-xs text-gray-500 mb-1">${l}</div>
-            <div class="text-xl font-bold ${c}">${formatPrice(v)}</div>
-          </div>
-        `).join('')}
+    <div class="mb-6 space-y-6">
+      <div>
+        <div class="text-g text-xl mb-4">Financial Overview</div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          ${[['Maximum Potential', totalPotential, 'text-gray-500'], ['Total Expected', expectedTotal, 'text-g'], ['Collected Fees', collectedFees, 'text-yellow-600'], ['Balance Due', expectedBalance, 'text-blue-600']].map(([l, v, c]) => `
+            <div class="bg-white rounded-xl shadow-card p-4">
+              <div class="text-xs text-gray-500 mb-1">${l}</div>
+              <div class="text-xl font-bold ${c}">${formatPrice(v)}</div>
+            </div>
+          `).join('')}
+        </div>
       </div>
 
       <div class="bg-white rounded-xl shadow-card p-5">
-        <h3 class="text-g text-lg mb-3">Hostel Breakdown</h3>
+        <h3 class="text-g text-lg mb-3">Hostel Summary</h3>
         ${hostelData.length === 0 ? '<p class="text-gray-400 text-sm">No hostels to display.</p>' : `
         <div class="overflow-x-auto">
           <table class="w-full">
@@ -641,6 +670,61 @@ export function renderAdmin() {
                   <td class="text-yellow-600 font-semibold text-sm">${formatPrice(d.col)}</td>
                   <td class="text-blue-600 text-sm">${formatPrice(d.bal)}</td>
                   <td class="text-g font-bold text-sm bg-gray-50">${formatPrice(d.expected)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        `}
+      </div>
+
+      <div class="bg-white rounded-xl shadow-card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-g text-lg">Detailed Room & Occupant Ledger</h3>
+          <div class="text-xs text-gray-400 font-mono capitalize">Detailed Revenue Breakdown</div>
+        </div>
+        ${roomDetails.length === 0 ? '<p class="text-gray-400 text-sm text-center py-8">No occupied rooms found yet.</p>' : `
+        <div class="overflow-x-auto">
+          <table class="w-full" style="min-width: 1000px;">
+            <thead class="tbl-hd">
+              <tr>
+                <th>Room</th>
+                <th>Occupant</th>
+                <th>Credentials</th>
+                <th>Course / Year</th>
+                <th>Total Price</th>
+                <th>Collected</th>
+                <th>Balance</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${roomDetails.map(d => `
+                <tr class="tbl-row text-xs">
+                  <td>
+                    <div class="font-bold text-g">${e(d.roomNumber)}</div>
+                    <div class="text-[10px] text-gray-400">${e(d.hostelName)}</div>
+                  </td>
+                  <td>
+                    <div class="font-semibold">${e(d.studentName)}</div>
+                    <div class="text-[10px] text-gray-500">${e(d.regNo)}</div>
+                  </td>
+                  <td>
+                    <div class="mb-1">📧 ${e(d.email)}</div>
+                    <div>📞 ${e(d.phone)}</div>
+                  </td>
+                  <td>
+                    <div class="font-semibold">${e(d.course)}</div>
+                    <div class="text-gray-400">Year ${e(d.year)} · Sem ${e(d.semester)}</div>
+                  </td>
+                  <td>${formatPrice(d.price)}</td>
+                  <td class="text-yellow-600 font-bold">${formatPrice(d.earnings)}</td>
+                  <td class="text-blue-700 font-bold">${formatPrice(d.balance)}</td>
+                  <td>
+                    <span class="px-2 py-0.5 rounded-full font-bold uppercase ${d.status==='booked'?'badge-ok':'bg-yellow-100 text-yellow-800'}" style="font-size: 9px;">
+                      ${e(d.status)}
+                    </span>
+                  </td>
                 </tr>
               `).join('')}
             </tbody>
