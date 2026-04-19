@@ -1163,7 +1163,7 @@ export function downloadBookingSlip(bookingId) {
       <div class="row"><span class="key">Booking Date</span><span class="val">${escapeHtml(booking.date ?? '—')}</span></div>
       <div class="ref">
         <div style="font-size:.65rem;color:#6b7280;margin-bottom:.25rem">BOOKING REFERENCE</div>
-        <div class="ref-num">#${escapeHtml(formatRef(booking.id, booking.reference_no))}</div>
+        <div class="ref-num">${escapeHtml(formatRef(booking.id, booking.reference_no))}</div>
         <div class="confirmed">✅ CONFIRMED · Paid via Flutterwave</div>
       </div>
     </div>

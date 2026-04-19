@@ -763,7 +763,7 @@ export function renderAdmin() {
             const bh = getHostel(b.hostelId);
             const br = bh?.rooms.find(r => r.id === b.roomId);
             return `<tr class="tbl-row">
-              <td class="font-mono text-xs text-gray-400">#${e(formatRef(b.id, b.reference_no))}</td>
+              <td class="font-mono text-xs text-gray-400">${e(formatRef(b.id, b.reference_no))}</td>
               <td class="font-semibold">${e(b.studentName)}</td>
               <td class="text-gray-500">${e(b.regNo)}</td>
               <td class="text-xs text-gray-500">${e(b.course)}</td>

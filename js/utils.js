@@ -267,7 +267,7 @@ export function bookingCardHtml(booking) {
     </div>
     <div class="mt-3 flex items-center justify-between flex-wrap gap-2">
       <div class="text-xs bg-yellow-50 text-yellow-700 px-2 py-1 rounded font-mono">
-        Ref: #${e(formatRef(booking.id, booking.reference_no))}
+        Ref: ${e(formatRef(booking.id, booking.reference_no))}
       </div>
       ${booking.status === 'confirmed'
         ? `<button onclick="App.downloadBookingSlip('${e(booking.id)}')"
