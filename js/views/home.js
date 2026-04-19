@@ -2,10 +2,6 @@
  * views/home.js
  * ═══════════════════════════════════════════════════════════════════════════
  * Separation of Concerns: renders ONLY the home page.
- * Booking.com-inspired upgrades:
- *   - Price range slider + semester filter in search bar
- *   - Skeleton loader while data is loading
- *   - Upgraded "How It Works" section with step illustrations
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -58,7 +54,7 @@ export function renderHome() {
     </div>
   </div>
 
-  <!-- Smart Search Bar (Booking.com style) -->
+  <!-- Search Hostels Section -->
   <div class="bg-white rounded-2xl shadow-card p-5 mb-8">
     <div class="text-g font-bold text-sm mb-3">🔍 Search Hostels</div>
     <div class="grid md:grid-cols-4 gap-3 items-end">
@@ -93,7 +89,7 @@ export function renderHome() {
       : hostels.slice(0, 3).map(renderHostelCard).join('')}
   </div>
 
-  <!-- How It Works (Booking.com style) -->
+  <!-- How It Works Section -->
   <div class="bg-white rounded-2xl shadow-card p-6 mb-6">
     <h2 class="text-g text-xl mb-6 text-center">How It Works</h2>
     <div class="grid md:grid-cols-4 gap-4 relative">
@@ -114,7 +110,7 @@ export function renderHome() {
     </div>
   </div>
 
-  <!-- Trust Signals (Booking.com style footer strip) -->
+  <!-- Trust Signals -->
   <div class="grid md:grid-cols-3 gap-4">
     ${[
       { icon: '🔒', title: 'Secure Payments',    desc: 'Flutterwave-powered · AES-256 encrypted data storage' },

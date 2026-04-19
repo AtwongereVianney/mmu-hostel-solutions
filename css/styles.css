@@ -52,7 +52,7 @@ h1, h2, h3, .serif {
 .badge-warn { background: #fef3c7; color: #92400e; }
 .badge-info { background: #dbeafe; color: #1e40af; }
 
-/* ── Availability Urgency Badges (Booking.com style) ────────────────────── */
+/* ── Availability Urgency Badges ─────────────────────────────────────────── */
 .avail-high   { background: #dcfce7; color: #166534; }   /* 5+ rooms */
 .avail-medium { background: #fef3c7; color: #92400e; }   /* 2–4 rooms */
 .avail-low    { background: #fee2e2; color: #991b1b; }   /* 1 room */
@@ -634,7 +634,7 @@ h1, h2, h3, .serif {
 @media (max-width: 768px) {
   .hide-mobile { display: none !important; }
 
-  /* Mobile: bottom-sheet modal (Booking.com style) */
+  /* Mobile: bottom-sheet modal */
   .modal-bg {
     align-items: flex-end;
   }

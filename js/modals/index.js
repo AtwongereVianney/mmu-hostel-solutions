@@ -1,11 +1,6 @@
 /**
  * modals/index.js
  * ═══════════════════════════════════════════════════════════════════════════
- * Booking.com upgrades:
- *   - Step 3 review: full price breakdown (semester fee + confirmation fee + balance)
- *   - Success modal: "Download Booking Slip" button
- *   - New modalBookingSlip() — printable receipt modal
- * ═══════════════════════════════════════════════════════════════════════════
  */
 
 'use strict';
@@ -592,7 +587,7 @@ function modalSuccess() {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   BOOKING SLIP (printable receipt — Booking.com-style confirmation)
+   BOOKING SLIP
 ──────────────────────────────────────────────────────────────────────────── */
 function modalBookingSlip() {
   const { bookingId } = state.modalData;
@@ -623,7 +618,7 @@ function modalBookingSlip() {
       <div class="slip-header">
         ${h ? hostelThumbnailHtml(h) : '<div style="width:3rem;height:3rem;background:#f3f4f6;border-radius:.5rem;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#9ca3af;text-align:center;padding:2px">No Image</div>'}
         <div>
-          <div style="font-size:1rem;font-weight:800">MMU Hostel Booking</div>
+          <div style="font-size:1rem;font-weight:800">Hostel Booking</div>
           <div style="font-size:.7rem;opacity:.75">Mountains of the Moon University · Fort Portal</div>
         </div>
       </div>

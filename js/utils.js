@@ -181,7 +181,7 @@ export function starRatingHtml(rating = 0, showNum = true) {
   return `<span class="star-row">${stars}${showNum ? `<span class="star-score">${Number(rating).toFixed(1)}</span>` : ''}</span>`;
 }
 
-/** ── AVAILABILITY BADGE HTML (Booking.com-style urgency) ─────────────────
+/** ── AVAILABILITY BADGE HTML ───────────────────────────────────────────────
  *  @param {number} available  count of available rooms
  */
 export function availabilityBadgeHtml(available) {
@@ -212,7 +212,7 @@ export function skeletonCardHtml() {
 }
 
 /** ── BOOKING TIMELINE HTML ────────────────────────────────────────────────
- *  Shows Booking.com-style status steps: Submitted → Payment → Confirmed
+ *  Shows status steps: Submitted → Payment → Confirmed
  */
 export function bookingTimelineHtml(status) {
   const steps = [

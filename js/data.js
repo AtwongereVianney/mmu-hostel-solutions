@@ -68,7 +68,7 @@ export const SEED_HOSTELS = [
     rooms: [
       { id: 101, number: 'R101', type: 'Single', price: 450000, confirmationFee: 50000, status: 'available', floor: '1st' },
       { id: 102, number: 'R102', type: 'Double', price: 300000, confirmationFee: 50000, status: 'available', floor: '1st' },
-      { id: 103, number: 'R103', type: 'Single', price: 450000, confirmationFee: 50000, status: 'pending',   floor: '1st', bookedBy: 'John Doe',    regNo: '2026/U/MMU/CCS/0000001' },
+      { id: 103, number: 'R103', type: 'Single', price: 450000, confirmationFee: 50000, status: 'pending',   floor: '1st', bookedBy: 'Andrew Kagwa', regNo: '2026/U/MMU/CCS/0000001' },
       { id: 104, number: 'R201', type: 'Triple', price: 220000, confirmationFee: 50000, status: 'available', floor: '2nd' },
       { id: 105, number: 'R202', type: 'Double', price: 300000, confirmationFee: 50000, status: 'booked',    floor: '2nd', bookedBy: 'Mary Tendo',  regNo: '2026/U/MMU/BIT/0000047' },
     ],

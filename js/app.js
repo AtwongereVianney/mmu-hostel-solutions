@@ -2,10 +2,7 @@
  * js/app.js – Application Entry Point & Render Engine
  * Wires all modules. Exposes window.App (all onclick= handlers).
  * Nothing imports app.js – this is the dependency leaf.
- *
- * v3.1 Booking.com upgrades:
- *   - toggleShortlist, downloadBookingSlip, setRating added to App namespace
- *   - loading state cleared after data loads (skeleton → real cards)
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 'use strict';
 
@@ -113,7 +110,7 @@ window.App = Object.freeze({
   /* ── Image upload ────────────────────────────────────────────────────── */
   handleImgUpload, handleDrop, clearImg, previewMap, liveVal,
 
-  /* ── Booking.com features ────────────────────────────────────────────── */
+  /* ── Core Features ─────────────────────────────────────────────────── */
   toggleShortlist,       // ❤️ Wishlist / shortlist toggle
   downloadBookingSlip,   // 📄 Print booking receipt
   setRating,             // ⭐ Admin sets hostel star rating
@@ -122,7 +119,7 @@ window.App = Object.freeze({
   doApplyCapture,        // ✅ Confirm captured photo
   stopCamera,            // ✕ Stop camera & close
   toggleHostelExpand,    // ↕ Expand/collapse hostel card
-  searchHostels: doSearchHostels, // 🔍 Intelligent search
+  searchHostels: doSearchHostels, // 🔍 Hostel search
   doUpdateDeveloperContact,
   doSendSupportTicket: (ev) => { if(ev) ev.preventDefault(); window.App.doSendSupportTicketImpl(ev); },
 });

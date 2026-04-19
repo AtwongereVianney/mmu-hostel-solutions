@@ -1,10 +1,5 @@
 /**
  * views/pages.js  – All page views
- * Booking.com upgrades:
- *   - Price range + semester filters on hostel list
- *   - Richer room cards with bed icons, urgency badges, confirmation fee
- *   - My Bookings: tabs (Search | Shortlist)
- *   - Admin: star rating management per hostel
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -42,7 +37,7 @@ export function renderHostels() {
     <span class="badge-ok text-xs px-2 py-0.5 rounded-full font-semibold">${filtered.length} found</span>
   </div>
 
-  <!-- Filters (Booking.com style panel) -->
+  <!-- Filters -->
   <div class="bg-white rounded-2xl shadow-card p-5 mb-6">
     <div class="font-bold text-g text-sm mb-3">🎚 Filter Hostels</div>
     <div class="grid md:grid-cols-3 gap-4 items-end mb-4">
@@ -164,7 +159,7 @@ export function renderHostelDetail() {
       </button>`).join('')}
   </div>
 
-  <!-- Rooms Grid (Booking.com-style rich cards) -->
+  <!-- Rooms Grid -->
   <div class="grid md:grid-cols-2 gap-4">
     ${rooms.length === 0
       ? '<div class="col-span-2 text-center py-8 text-gray-400">No rooms match this filter.</div>'
@@ -192,7 +187,7 @@ export function renderHostelDetail() {
                 ${r.type === 'Single' ? '<span class="chip">🚿 Private Bath</span>' : ''}
               </div>
 
-              <!-- Price breakdown (Booking.com style) -->
+              <!-- Price breakdown -->
               <div class="bg-gray-50 rounded-lg p-3 mb-3 text-sm">
                 <div class="flex justify-between mb-1">
                   <span class="text-gray-500">Per semester</span>

@@ -1,11 +1,6 @@
 /**
  * js/handlers/index.js  –  ALL Business Logic & Action Handlers
  * ═══════════════════════════════════════════════════════════════════════════
- * Booking.com upgrades added:
- *   • toggleShortlist(hostelId)  — save/remove from wishlist
- *   • downloadBookingSlip(id)    — open printable booking receipt
- *   • setRating(hostelId, rating) — admin sets star rating
- * ═══════════════════════════════════════════════════════════════════════════
  */
 
 'use strict';
@@ -538,7 +533,7 @@ export async function doAssignHostelManager(hostelId) {
 
 /* ── Search ────────────────────────────────────────────────────────────── */
 /**
- * Intelligent search: redirects to detail page if a single/exact match is found,
+ * Hostel search: redirects to detail page if a single/exact match is found,
  * otherwise shows the list with filters applied.
  */
 export function doSearchHostels() {
@@ -1088,7 +1083,7 @@ export function lookupBooking() {
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   SHORTLIST / WISHLIST (Booking.com heart button)
+   SHORTLIST / WISHLIST
 ════════════════════════════════════════════════════════════════════════════ */
 export function toggleShortlist(hostelId) {
   const current = state.shortlist ?? [];

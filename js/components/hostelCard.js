@@ -1,11 +1,7 @@
 /**
  * components/hostelCard.js
  * ═══════════════════════════════════════════════════════════════════════════
- * Reusable hostel card component with:
- *   - Star rating (Booking.com style)
- *   - Availability urgency badge
- *   - ❤️ Shortlist / Wishlist button
- *   - Price-from display
+ * Reusable hostel card component.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -27,7 +23,7 @@ export function renderHostelCard(h) {
     <!-- Cover image / emoji fallback -->
     <div style="position:relative">
       ${hostelCoverHtml(h)}
-      <!-- Wishlist heart button (Booking.com style) -->
+      <!-- Shortlist heart button -->
       <button class="btn-heart${isSaved ? ' saved' : ''}"
               style="position:absolute;top:.5rem;right:.5rem;background:rgba(255,255,255,.85);backdrop-filter:blur(4px);border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;"
               onclick="event.stopPropagation(); App.toggleShortlist(${h.id})"
@@ -52,7 +48,7 @@ export function renderHostelCard(h) {
       <!-- Distance -->
       <div class="text-xs text-gray-400 mb-2">📍 ${e(h.distance)}</div>
 
-      <!-- Availability urgency badge (Booking.com style) -->
+      <!-- Availability urgency badge -->
       <div class="mb-3">${availabilityBadgeHtml(s.a)}</div>
 
       <!-- Amenity chips (first 3) -->
