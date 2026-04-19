@@ -319,8 +319,37 @@ export function renderStudentDashboard() {
   const hostel = latest ? getHostel(latest.hostelId) : null;
   const room = latest && hostel ? (hostel.rooms || []).find(r => r.id === latest.roomId) : null;
 
-  const pending = mine.filter(b => b.status === 'pending').length;
-  const confirmed = mine.filter(b => b.status === 'confirmed').length;
+  const pendingCount = mine.filter(b => b.status === 'pending').length;
+  const confirmedCount = mine.filter(b => b.status === 'confirmed').length;
+
+  // Financial calculations
+  let totalBilled = 0;
+  let totalPaid = 0;
+  const financeLedger = mine.map(b => {
+    const h = getHostel(b.hostelId);
+    const r = h?.rooms.find(rx => rx.id === b.roomId);
+    if (!r) return null;
+    
+    const price = Number(r.price || 0);
+    const fee = Number(r.confirmationFee || 0);
+    const paid = (b.status === 'confirmed') ? fee : 0;
+    const balance = price - paid;
+    
+    totalBilled += price;
+    totalPaid += paid;
+    
+    return {
+      id: b.id,
+      hostelName: h.name,
+      roomNumber: r.number,
+      price,
+      paid,
+      balance,
+      status: b.status,
+      date: b.date
+    };
+  }).filter(Boolean);
+  const totalBalanceDue = totalBilled - totalPaid;
 
   return `
   <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
@@ -328,37 +357,98 @@ export function renderStudentDashboard() {
       <h2 class="text-g text-2xl">Student Dashboard</h2>
       <p class="text-gray-500 text-sm">Welcome ${e(state.adminUser || 'Student')}. Track your booking status and hostel details.</p>
     </div>
-    <button onclick="App.go('hostels')" class="btn-out">Browse Hostels</button>
+    <div class="flex gap-2">
+      <button onclick="App.go('profile')" class="btn-out text-sm">👤 My Profile</button>
+      <button onclick="App.go('hostels')" class="btn-g">Browse Hostels</button>
+    </div>
   </div>
 
-  <div class="grid md:grid-cols-3 gap-4 mb-6">
+  <!-- Booking Quick Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
     <div class="bg-white rounded-xl shadow-card p-4">
       <div class="text-xs text-gray-500">Total Bookings</div>
       <div class="text-2xl font-bold text-g">${mine.length}</div>
     </div>
     <div class="bg-white rounded-xl shadow-card p-4">
       <div class="text-xs text-gray-500">Pending</div>
-      <div class="text-2xl font-bold text-yellow-600">${pending}</div>
+      <div class="text-2xl font-bold text-yellow-600">${pendingCount}</div>
     </div>
     <div class="bg-white rounded-xl shadow-card p-4">
       <div class="text-xs text-gray-500">Confirmed</div>
-      <div class="text-2xl font-bold text-green-700">${confirmed}</div>
+      <div class="text-2xl font-bold text-green-700">${confirmedCount}</div>
     </div>
   </div>
 
-  <div class="bg-white rounded-xl shadow-card p-5 mb-6">
-    <h3 class="text-g text-lg mb-3">Latest Booking</h3>
-    ${latest ? `
-      <div class="grid md:grid-cols-2 gap-3 text-sm">
-        <div><span class="text-gray-500">Reference:</span> <b>#${e(latest.id)}</b></div>
-        <div><span class="text-gray-500">Status:</span> <b class="${latest.status==='confirmed'?'text-green-700':'text-yellow-700'}">${e(latest.status)}</b></div>
-        <div><span class="text-gray-500">Hostel:</span> <b>${e(hostel?.name || '—')}</b></div>
-        <div><span class="text-gray-500">Room:</span> <b>${e(room?.number || '—')} ${room?.type ? `(${e(room.type)})` : ''}</b></div>
-        <div><span class="text-gray-500">Date:</span> <b>${e(latest.date || '—')}</b></div>
-        <div><span class="text-gray-500">Course:</span> <b>${e(latest.course || '—')}</b></div>
+  <!-- Financial Overview -->
+  <div class="mb-6">
+    <h3 class="text-g text-lg mb-3 flex items-center gap-2">💰 My Finances</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white rounded-xl shadow-card p-4 border-l-4 border-gray-400">
+        <div class="text-xs text-gray-500 mb-1">Total Billed</div>
+        <div class="text-xl font-bold text-gray-700">${formatPrice(totalBilled)}</div>
+        <div class="text-[10px] text-gray-400 mt-1">Total cost of all bookings</div>
       </div>
-      ${hostel ? `<div class="mt-4"><button class="btn-g" onclick="App.go('hostelDetail', { selH: ${hostel.id}, fType: 'All' })">View Hostel Details</button></div>` : ''}
-    ` : '<p class="text-gray-400 text-sm">No booking found for your account yet.</p>'}
+      <div class="bg-white rounded-xl shadow-card p-4 border-l-4 border-yellow-500">
+        <div class="text-xs text-gray-500 mb-1">Total Paid (Fees)</div>
+        <div class="text-xl font-bold text-yellow-600">${formatPrice(totalPaid)}</div>
+        <div class="text-[10px] text-gray-400 mt-1">Confirmed confirmation fees</div>
+      </div>
+      <div class="bg-white rounded-xl shadow-card p-4 border-l-4 border-blue-600">
+        <div class="text-xs text-gray-500 mb-1">Balance Due on Arrival</div>
+        <div class="text-xl font-bold text-blue-700">${formatPrice(totalBalanceDue)}</div>
+        <div class="text-[10px] text-gray-400 mt-1">To be cleared at the hostel</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-6 mb-6">
+    <!-- Latest Booking -->
+    <div class="bg-white rounded-xl shadow-card p-5">
+      <h3 class="text-g text-lg mb-3">Latest Booking</h3>
+      ${latest ? `
+        <div class="grid md:grid-cols-2 gap-3 text-sm">
+          <div><span class="text-gray-500">Reference:</span> <b>#${e(latest.id)}</b></div>
+          <div><span class="text-gray-500">Status:</span> <b class="${latest.status==='confirmed'?'text-green-700':'text-yellow-700'}">${e(latest.status)}</b></div>
+          <div><span class="text-gray-500">Hostel:</span> <b>${e(hostel?.name || '—')}</b></div>
+          <div><span class="text-gray-500">Room:</span> <b>${e(room?.number || '—')} ${room?.type ? `(${e(room.type)})` : ''}</b></div>
+          <div><span class="text-gray-500">Date:</span> <b>${e(latest.date || '—')}</b></div>
+          <div><span class="text-gray-500">Course:</span> <b>${e(latest.course || '—')}</b></div>
+        </div>
+        ${hostel ? `<div class="mt-4"><button class="btn-g w-full" onclick="App.go('hostelDetail', { selH: ${hostel.id}, fType: 'All' })">View Hostel Details</button></div>` : ''}
+      ` : '<p class="text-gray-400 text-sm">No booking found for your account yet.</p>'}
+    </div>
+
+    <!-- Payment Ledger -->
+    <div class="bg-white rounded-xl shadow-card p-5">
+      <h3 class="text-g text-lg mb-3">Payment Ledger</h3>
+      ${financeLedger.length ? `
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-gray-50 text-gray-500 uppercase font-semibold">
+              <tr>
+                <th class="px-2 py-2">Hostel / Room</th>
+                <th class="px-2 py-2 text-right">Billed</th>
+                <th class="px-2 py-2 text-right">Paid</th>
+                <th class="px-2 py-2 text-right">Balance</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              ${financeLedger.map(l => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                  <td class="px-2 py-2">
+                    <div class="font-bold text-g">${e(l.hostelName)}</div>
+                    <div class="text-gray-400">#${e(l.roomNumber)} · ${e(l.id)}</div>
+                  </td>
+                  <td class="px-2 py-2 text-right font-semibold">${formatPrice(l.price)}</td>
+                  <td class="px-2 py-2 text-right text-yellow-600 font-bold">${formatPrice(l.paid)}</td>
+                  <td class="px-2 py-2 text-right text-blue-700 font-bold">${formatPrice(l.balance)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : '<p class="text-gray-400 text-sm text-center py-4">No financial records yet.</p>'}
+    </div>
   </div>
 
   <div class="bg-white rounded-xl shadow-card p-5">
