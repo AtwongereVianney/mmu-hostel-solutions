@@ -116,6 +116,14 @@ export function makeId() {
   return Date.now() + (Math.random() * 1000 | 0);
 }
 
+/** Format numeric ID into a professional reference string (e.g. #BK-0012) */
+export function formatRef(id, dbRef = null) {
+  if (dbRef) return dbRef;
+  if (!id) return '—';
+  if (typeof id === 'string' && id.startsWith('BK-')) return id;
+  return `BK-${String(id).padStart(4, '0')}`;
+}
+
 /** Today's date as dd/mm/yyyy */
 export function today() {
   return new Date().toLocaleDateString('en-GB');
@@ -259,7 +267,7 @@ export function bookingCardHtml(booking) {
     </div>
     <div class="mt-3 flex items-center justify-between flex-wrap gap-2">
       <div class="text-xs bg-yellow-50 text-yellow-700 px-2 py-1 rounded font-mono">
-        Ref: #${e(booking.id)}
+        Ref: #${e(formatRef(booking.id, booking.reference_no))}
       </div>
       ${booking.status === 'confirmed'
         ? `<button onclick="App.downloadBookingSlip('${e(booking.id)}')"

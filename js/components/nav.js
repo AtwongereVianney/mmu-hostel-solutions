@@ -44,6 +44,7 @@ export function renderNav() {
         <button onclick="App.go('hostels')"    class="nav-a ${view==='hostels'||view==='hostelDetail'?'active':''}">Hostels</button>
         ${isLoggedIn ? `<button onclick="App.go('${isStudent ? 'studentDashboard' : 'myBookings'}')" class="nav-a ${view==='myBookings'||view==='studentDashboard'?'active':''}">${isStudent ? 'Student Dashboard' : 'My Bookings'}</button>` : ''}
         ${isLoggedIn ? `<button onclick="App.go('profile')" class="nav-a ${view==='profile'?'active':''}">Profile</button>` : ''}
+        <button onclick="App.go('help')" class="nav-a ${view==='help'?'active':''}">Help</button>
         ${adminLinks}
         ${isStudent ? `<button onclick="App.logout()" class="text-red-300 text-xs border border-red-400 px-2 py-1 rounded font-semibold hover:text-red-100">Logout</button>` : ''}
       </div>
@@ -59,6 +60,7 @@ export function renderNav() {
       <button onclick="App.go('hostels')"    class="nav-a text-left py-1">🏢 Hostels</button>
       ${isLoggedIn ? `<button onclick="App.go('${isStudent ? 'studentDashboard' : 'myBookings'}')" class="nav-a text-left py-1">${isStudent ? '🎓 Student Dashboard' : '📋 My Bookings'}</button>` : ''}
       ${isLoggedIn ? `<button onclick="App.go('profile')" class="nav-a text-left py-1">👤 Profile</button>` : ''}
+      <button onclick="App.go('help')" class="nav-a text-left py-1">❓ Help & Support</button>
       ${adminMode
         ? `<button onclick="App.go('admin')"    class="nav-a text-left py-1">⚙️ Admin</button>
            ${isSystemAdmin ? `<button onclick="App.go('security')" class="nav-a text-left py-1">🔐 Security</button>` : ''}

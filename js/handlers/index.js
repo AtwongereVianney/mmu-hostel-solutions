@@ -11,7 +11,7 @@
 'use strict';
 
 import { state, setState, hostels, bookings, setBookings } from '../state.js';
-import { saveData, loadData, createUser, updateUserStatus, deleteUser, deleteHostel, deleteRoom, deleteBooking, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, saveUserProfile, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials, saveSystemSettings }  from '../storage.js';
+import { saveData, loadData, createUser, updateUserStatus, deleteUser, deleteHostel, deleteRoom, deleteBooking, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, saveUserProfile, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials, saveSystemSettings, sendSupportEmail }  from '../storage.js';
 
 import { showToast } from '../components/toast.js';
 import {
@@ -1163,7 +1163,7 @@ export function downloadBookingSlip(bookingId) {
       <div class="row"><span class="key">Booking Date</span><span class="val">${escapeHtml(booking.date ?? '—')}</span></div>
       <div class="ref">
         <div style="font-size:.65rem;color:#6b7280;margin-bottom:.25rem">BOOKING REFERENCE</div>
-        <div class="ref-num">#${escapeHtml(booking.id)}</div>
+        <div class="ref-num">#${escapeHtml(formatRef(booking.id, booking.reference_no))}</div>
         <div class="confirmed">✅ CONFIRMED · Paid via Flutterwave</div>
       </div>
     </div>
@@ -1389,4 +1389,49 @@ export async function doUpdateDeveloperContact(ev) {
   setState({ developerContact: f.dev_contact });
   showToast('Settings saved successfully.', 'success');
   await auditLog('SETTINGS_UPDATE', 'System developer contact updated');
+}
+
+export async function doSendSupportTicketImpl(ev) {
+  const name = sanitize(document.getElementById('supName')?.value || '', 100);
+  const email = (document.getElementById('supEmail')?.value || '').trim().toLowerCase();
+  const subject = sanitize(document.getElementById('supSubject')?.value || '', 150);
+  const message = sanitize(document.getElementById('supMessage')?.value || '', 1000);
+
+  if (!email || !message) {
+    showToast('Email and message are required.', 'error');
+    return;
+  }
+  if (!validate('email', email)) {
+    showToast('Invalid email format.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('supBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳ Sending...</span>';
+  }
+
+  try {
+    const res = await sendSupportEmail({ name, email, subject, message });
+    if (res?.success) {
+      showToast('Support ticket sent! We will get back to you soon.', 'success');
+      await auditLog('SUPPORT_TICKET_SENT', `User ${email} sent a support ticket.`);
+      
+      // Clear form
+      if (document.getElementById('supName')) document.getElementById('supName').value = '';
+      if (document.getElementById('supEmail')) document.getElementById('supEmail').value = '';
+      if (document.getElementById('supSubject')) document.getElementById('supSubject').value = '';
+      if (document.getElementById('supMessage')) document.getElementById('supMessage').value = '';
+    } else {
+      showToast(res?.error || 'Failed to send support ticket.', 'error');
+    }
+  } catch (err) {
+    showToast('Network error while sending ticket.', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>🚀 Send Message</span>';
+    }
+  }
 }

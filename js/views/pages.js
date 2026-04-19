@@ -13,7 +13,7 @@
 import { state }                      from '../state.js';
 import { hostels, bookings }          from '../state.js';
 import {
-  e, formatPrice, roomStats, getHostel,
+  e, formatPrice, roomStats, getHostel, formatRef,
   mapEmbedUrl, mapLinkUrl, hostelCoverHtml, hostelThumbnailHtml, roomPreviewHtml,
   bookingCardHtml, starRatingHtml, availabilityBadgeHtml, skeletonCardHtml,
 } from '../utils.js';
@@ -407,7 +407,7 @@ export function renderStudentDashboard() {
       <h3 class="text-g text-lg mb-3">Latest Booking</h3>
       ${latest ? `
         <div class="grid md:grid-cols-2 gap-3 text-sm">
-          <div><span class="text-gray-500">Reference:</span> <b>#${e(latest.id)}</b></div>
+          <div><span class="text-gray-500">Reference:</span> <b>#${e(formatRef(latest.id))}</b></div>
           <div><span class="text-gray-500">Status:</span> <b class="${latest.status==='confirmed'?'text-green-700':'text-yellow-700'}">${e(latest.status)}</b></div>
           <div><span class="text-gray-500">Hostel:</span> <b>${e(hostel?.name || '—')}</b></div>
           <div><span class="text-gray-500">Room:</span> <b>${e(room?.number || '—')} ${room?.type ? `(${e(room.type)})` : ''}</b></div>
@@ -437,7 +437,7 @@ export function renderStudentDashboard() {
                 <tr class="hover:bg-gray-50 transition-colors">
                   <td class="px-2 py-2">
                     <div class="font-bold text-g">${e(l.hostelName)}</div>
-                    <div class="text-gray-400">#${e(l.roomNumber)} · ${e(l.id)}</div>
+                    <div class="text-gray-400">#${e(l.roomNumber)} · ${e(formatRef(l.id))}</div>
                   </td>
                   <td class="px-2 py-2 text-right font-semibold">${formatPrice(l.price)}</td>
                   <td class="px-2 py-2 text-right text-yellow-600 font-bold">${formatPrice(l.paid)}</td>
@@ -454,6 +454,125 @@ export function renderStudentDashboard() {
   <div class="bg-white rounded-xl shadow-card p-5">
     <h3 class="text-g text-lg mb-3">My Booking History</h3>
     ${mine.length ? `<div class="space-y-3">${mine.map(bookingCardHtml).join('')}</div>` : '<p class="text-gray-400 text-sm">No bookings yet.</p>'}
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HELP & SUPPORT
+   (Integrated User Manual + Contact Form)
+══════════════════════════════════════════════════════════════════════════ */
+export function renderHelp() {
+  const role = state.userRole || 'guest';
+  
+  const faqItem = (q, a) => `
+    <div class="border-b border-gray-100 py-4">
+      <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.chevron').classList.toggle('rotate-180')" 
+              class="flex items-center justify-between w-full text-left font-semibold text-g hover:text-green-700 transition-colors">
+        <span>${e(q)}</span>
+        <span class="chevron transition-transform duration-200">▼</span>
+      </button>
+      <div class="hidden mt-3 text-sm text-gray-600 leading-relaxed fade">
+        ${a}
+      </div>
+    </div>
+  `;
+
+  return `
+  <div class="max-w-4xl mx-auto">
+    <div class="text-center mb-10">
+      <h2 class="text-g text-3xl serif mb-2">Help & Support Center</h2>
+      <p class="text-gray-500">Find answers or get in touch with our technical team.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-8 mb-12">
+      <!-- Quick Links -->
+      <div class="md:col-span-2">
+        <div class="bg-white rounded-2xl shadow-card p-6 mb-6">
+          <h3 class="text-g text-xl mb-4 flex items-center gap-2">📖 User Manual</h3>
+          
+          <div class="space-y-2">
+            <!-- Student Section -->
+            <div class="bg-green-50 rounded-xl p-4 border border-green-100">
+              <h4 class="font-bold text-g mb-2 flex items-center gap-2">🎓 Student Guide</h4>
+              ${faqItem('How do I book a room?', 'Browse hostels, click "View Rooms", select an available room, and fill in your details. You will need to pay a confirmation fee to secure the booking.')}
+              ${faqItem('Where do I see my financial status?', 'Log in and go to your "Student Dashboard". The "My Finances" section shows your total billed, paid, and balance due.')}
+              ${faqItem('How do I confirm my payment?', 'Payments are usually confirmed by the hostel manager. Once confirmed, your booking status will change from "Pending" to "Confirmed".')}
+            </div>
+
+            <!-- Manager Section -->
+            <div class="bg-yellow-50 rounded-xl p-4 border border-yellow-100 ${role === 'hostel_owner' || role === 'admin' ? '' : 'opacity-60'}">
+              <h4 class="font-bold text-yellow-800 mb-2 flex items-center gap-2">🏢 Manager Guide</h4>
+              ${faqItem('How do I confirm a student\'s payment?', 'In the Admin Panel, go to the "Hostels" tab, expand your hostel, and click "✅ Confirm Pay" next to the pending room.')}
+              ${faqItem('How do I add or edit rooms?', 'Click the "+ Room" button on your hostel card or "✏️ Edit" on an existing room row.')}
+              ${faqItem('Where are the financial reports?', 'The "Finances" tab in the Admin Panel provides a detailed revenue and occupant ledger.')}
+            </div>
+
+            <!-- Admin Section -->
+            <div class="bg-blue-50 rounded-xl p-4 border border-blue-100 ${role === 'admin' ? '' : 'opacity-60'}">
+              <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2">🔐 Administrator Guide</h4>
+              ${faqItem('How do I manage users and roles?', 'Use the "Users" and "Roles" tabs to onboard staff and configure granular permissions.')}
+              ${faqItem('How do I audit system actions?', 'Visit the "Security" panel for a full audit trail of all critical system actions.')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact Support Form -->
+      <div class="md:col-span-1">
+        <div class="bg-g text-white rounded-2xl shadow-card p-6 sticky top-24">
+          <h3 class="text-xl mb-4 flex items-center gap-2">✉️ Contact Support</h3>
+          <form onsubmit="App.doSendSupportTicket(event)" class="space-y-4">
+            <div>
+              <label class="text-xs uppercase font-bold text-green-200 mb-1 block">Your Name</label>
+              <input id="supName" type="text" class="inp-dark w-full" placeholder="Full Name" value="${e(state.adminUser || '')}" required/>
+            </div>
+            <div>
+              <label class="text-xs uppercase font-bold text-green-200 mb-1 block">Email Address</label>
+              <input id="supEmail" type="email" class="inp-dark w-full" placeholder="email@mmu.ac.ug" value="${e(state.userEmail || '')}" required/>
+            </div>
+            <div>
+              <label class="text-xs uppercase font-bold text-green-200 mb-1 block">Subject</label>
+              <select id="supSubject" class="inp-dark w-full">
+                <option>Booking Issue</option>
+                <option>Payment Problem</option>
+                <option>Account Access</option>
+                <option>Other / Feedback</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs uppercase font-bold text-green-200 mb-1 block">Message</label>
+              <textarea id="supMessage" class="inp-dark w-full h-24" placeholder="How can we help?" required></textarea>
+            </div>
+            <button id="supBtn" type="submit" class="btn-gold w-full mt-2 font-bold py-3">
+              <span>🚀 Send Message</span>
+            </button>
+          </form>
+
+          <div class="mt-8 pt-6 border-t border-green-700">
+            <h4 class="text-xs uppercase font-bold text-green-200 mb-3">Direct Support</h4>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center gap-2">📞 <a href="tel:0756188401" class="hover:underline">0756188401</a></div>
+              <div class="flex items-center gap-2">✉️ <a href="mailto:devSupport@mmu.ac.ug" class="hover:underline">devSupport@mmu.ac.ug</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security Tips -->
+    <div class="bg-white rounded-2xl shadow-card p-6 border-t-4 border-yellow-400">
+      <h3 class="text-g text-xl mb-4 flex items-center gap-2">🛡️ Security Best Practices</h3>
+      <div class="grid md:grid-cols-2 gap-6 text-sm text-gray-600">
+        <ul class="list-disc pl-5 space-y-2">
+          <li><b>Password Hygiene:</b> Change your password regularly via the <button onclick="App.go('profile')" class="text-g underline">Profile</button> section.</li>
+          <li><b>Avoid Public Devices:</b> If you must use a public computer, always use Private/Incognito mode.</li>
+        </ul>
+        <ul class="list-disc pl-5 space-y-2">
+          <li><b>Session Security:</b> Always log out when finished. The system will auto-logout after 30 minutes of inactivity.</li>
+          <li><b>Verify Links:</b> Only enter your credentials on the official MMU Hostel Booking portal.</li>
+        </ul>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -644,7 +763,7 @@ export function renderAdmin() {
             const bh = getHostel(b.hostelId);
             const br = bh?.rooms.find(r => r.id === b.roomId);
             return `<tr class="tbl-row">
-              <td class="font-mono text-xs text-gray-400">#${e(b.id)}</td>
+              <td class="font-mono text-xs text-gray-400">#${e(formatRef(b.id, b.reference_no))}</td>
               <td class="font-semibold">${e(b.studentName)}</td>
               <td class="text-gray-500">${e(b.regNo)}</td>
               <td class="text-xs text-gray-500">${e(b.course)}</td>

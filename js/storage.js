@@ -152,6 +152,10 @@ export async function sendApprovedBookingCredentials(payload) {
   return apiRequest('booking-approval', 'POST', payload);
 }
 
+export async function sendSupportEmail(payload) {
+  return apiRequest('support', 'POST', payload);
+}
+
 /* ── Secure localStorage helpers (fallback) ─────────────────────────────── */
 async function secureGet(key, fallback = null) {
   const raw = localStorage.getItem(key);

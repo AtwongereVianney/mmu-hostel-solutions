@@ -76,6 +76,26 @@ h1, h2, h3, .serif {
 .inp.ok  { border-color: #16a34a; background: #f0fdf4; }
 .inp.bad { border-color: #dc2626; background: #fff5f5; }
 
+.inp-dark {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius);
+  color: #fff;
+  padding: .65rem .75rem;
+  font-size: .875rem;
+  font-family: 'Nunito', sans-serif;
+  transition: all .2s;
+}
+.inp-dark:focus {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--gold);
+  outline: none;
+}
+.inp-dark::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .lbl {
   display: block;
   font-size: .7rem;
@@ -576,6 +596,10 @@ h1, h2, h3, .serif {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
 }
 
 /* ── Scrollbar ───────────────────────────────────────────────────────────── */

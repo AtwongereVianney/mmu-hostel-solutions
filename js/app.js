@@ -16,7 +16,7 @@ import { ALLOWED_VIEWS } from './data.js';
 import { renderNav }  from './components/nav.js';
 import { renderToast, showToast } from './components/toast.js';
 import { renderHome } from './views/home.js';
-import { renderHostels, renderHostelDetail, renderMyBookings, renderStudentDashboard, renderAdmin, renderSecurity, renderProfile } from './views/pages.js';
+import { renderHostels, renderHostelDetail, renderMyBookings, renderStudentDashboard, renderAdmin, renderSecurity, renderProfile, renderHelp } from './views/pages.js';
 import { renderModal } from './modals/index.js';
 import {
   doLogin, doLogout,
@@ -44,6 +44,7 @@ function render() {
   const views = {
     home: renderHome, hostels: renderHostels, hostelDetail: renderHostelDetail,
     admin: renderAdmin, myBookings: renderMyBookings, studentDashboard: renderStudentDashboard, security: renderSecurity, profile: renderProfile,
+    help: renderHelp,
   };
   const viewFn = views[state.view] || renderHome;
   root.innerHTML = renderNav() +
@@ -123,6 +124,7 @@ window.App = Object.freeze({
   toggleHostelExpand,    // ↕ Expand/collapse hostel card
   searchHostels: doSearchHostels, // 🔍 Intelligent search
   doUpdateDeveloperContact,
+  doSendSupportTicket: (ev) => { if(ev) ev.preventDefault(); window.App.doSendSupportTicketImpl(ev); },
 });
 
 window.Sec = Object.freeze({ sanitize });
