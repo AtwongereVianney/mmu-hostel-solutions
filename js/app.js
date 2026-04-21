@@ -45,7 +45,7 @@ function render() {
   };
   const viewFn = views[state.view] || renderHome;
   root.innerHTML = renderNav() +
-    `<main class="max-w-6xl mx-auto px-4 py-6 fade">${viewFn()}</main>` +
+    `<main class="w-full px-4 md:px-8 py-6 fade">${viewFn()}</main>` +
     renderModal() + renderToast();
 }
 

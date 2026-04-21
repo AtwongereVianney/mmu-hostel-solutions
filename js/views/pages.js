@@ -473,7 +473,7 @@ export function renderHelp() {
   `;
 
   return `
-  <div class="max-w-4xl mx-auto">
+  <div class="w-full">
     <div class="text-center mb-10">
       <h2 class="text-g text-3xl serif mb-2">Help & Support Center</h2>
       <p class="text-gray-500">Find answers or get in touch with our technical team.</p>

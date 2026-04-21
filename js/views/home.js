@@ -38,7 +38,6 @@ export function renderHome() {
         </p>
         <div class="flex gap-3 flex-wrap">
           <button onclick="App.go('hostels')"    class="bg-yellow-400 text-green-900 px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-yellow-300 transition-colors">Browse Hostels →</button>
-          <button onclick="App.go('myBookings')" class="border border-white text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-white hover:text-green-900 transition-colors">My Bookings</button>
         </div>
       </div>
 

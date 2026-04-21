@@ -24,7 +24,7 @@ export function renderNav() {
 
   return `
   <nav class="bg-g shadow-lg sticky top-0 z-40">
-    <div class="max-w-6xl mx-auto px-4 flex items-center justify-between h-16">
+    <div class="w-full px-4 md:px-8 flex items-center justify-between h-16">
 
       <!-- Brand -->
       <button onclick="App.go('home')" class="flex items-center gap-3 text-left">
