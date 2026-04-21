@@ -92,6 +92,8 @@ export const state = {
   toast:       null,         // { msg, type } or null
   successMsg:  '',
   developerContact: '',
+  supportPhone: '0756188401',
+  supportEmail: 'devSupport@mmu.ac.ug',
 };
 
 /* ── Render callback registry ────────────────────────────────────────────── */

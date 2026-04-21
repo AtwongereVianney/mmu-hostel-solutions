@@ -546,8 +546,8 @@ export function renderHelp() {
           <div class="mt-8 pt-6 border-t border-green-700">
             <h4 class="text-xs uppercase font-bold text-green-200 mb-3">Direct Support</h4>
             <div class="space-y-2 text-sm">
-              <div class="flex items-center gap-2">📞 <a href="tel:0756188401" class="hover:underline">0756188401</a></div>
-              <div class="flex items-center gap-2">✉️ <a href="mailto:devSupport@mmu.ac.ug" class="hover:underline">devSupport@mmu.ac.ug</a></div>
+              <div class="flex items-center gap-2">📞 <a href="tel:${e(state.supportPhone || '0756188401')}" class="hover:underline">${e(state.supportPhone || '0756188401')}</a></div>
+              <div class="flex items-center gap-2">✉️ <a href="mailto:${e(state.supportEmail || 'devSupport@mmu.ac.ug')}" class="hover:underline">${e(state.supportEmail || 'devSupport@mmu.ac.ug')}</a></div>
             </div>
           </div>
         </div>
@@ -1111,12 +1111,20 @@ export function renderAdmin() {
     <h3 class="text-g text-lg mb-4">System Settings</h3>
     
     <div class="max-w-md border rounded-xl p-4 mb-4">
-      <h4 class="font-bold text-gray-700 mb-2">Developer Contact Information</h4>
-      <p class="text-xs text-gray-500 mb-3">This information will be displayed in the footer of the home page.</p>
+      <h4 class="font-bold text-gray-700 mb-2">System Contact Information</h4>
+      <p class="text-xs text-gray-500 mb-3">Update footer info and Help Page contacts.</p>
       <form onsubmit="App.doUpdateDeveloperContact(event)" class="space-y-3">
         <div>
-          <label class="lbl">Contact Details</label>
+          <label class="lbl">Footer Developer Info</label>
           <input id="devContact" class="inp" value="${e(state.developerContact || '')}" placeholder="e.g. MMU Tech Team | devSupport@mmu.ac.ug | 0756188401" required />
+        </div>
+        <div>
+          <label class="lbl">Help Page Phone</label>
+          <input id="supPhone" class="inp" value="${e(state.supportPhone || '0756188401')}" placeholder="e.g. 0756188401" required />
+        </div>
+        <div>
+          <label class="lbl">Help Page Email</label>
+          <input id="supEmailSet" type="email" class="inp" value="${e(state.supportEmail || 'devSupport@mmu.ac.ug')}" placeholder="e.g. devSupport@mmu.ac.ug" required />
         </div>
         <button type="submit" class="btn-g w-full">Save Settings</button>
       </form>

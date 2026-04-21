@@ -32,6 +32,7 @@ import {
   openCamera, capturePhoto, doApplyCapture, stopCamera,
   toggleHostelExpand, doSearchHostels,
   doUpdateDeveloperContact,
+  doSendSupportTicketImpl,
 } from './handlers/index.js';
 
 /* Render engine */
@@ -121,7 +122,7 @@ window.App = Object.freeze({
   toggleHostelExpand,    // ↕ Expand/collapse hostel card
   searchHostels: doSearchHostels, // 🔍 Hostel search
   doUpdateDeveloperContact,
-  doSendSupportTicket: (ev) => { if(ev) ev.preventDefault(); window.App.doSendSupportTicketImpl(ev); },
+  doSendSupportTicket: (ev) => { if(ev) ev.preventDefault(); doSendSupportTicketImpl(ev); },
 });
 
 window.Sec = Object.freeze({ sanitize });

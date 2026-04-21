@@ -1377,13 +1377,25 @@ export function toggleHostelExpand(id) {
 export async function doUpdateDeveloperContact(ev) {
   ev.preventDefault();
   if (state.userRole !== 'admin') return;
-  const f = { dev_contact: document.getElementById('devContact').value.trim() };
+  const f = {
+    dev_contact: document.getElementById('devContact').value.trim(),
+    support_phone: document.getElementById('supPhone')?.value.trim() || '0756188401',
+    support_email: document.getElementById('supEmailSet')?.value.trim() || 'devSupport@mmu.ac.ug'
+  };
   if (!f.dev_contact) { showToast('Contact cannot be empty', 'error'); return; }
   
-  await saveSystemSettings({ developerContact: f.dev_contact });
-  setState({ developerContact: f.dev_contact });
+  await saveSystemSettings({
+    developerContact: f.dev_contact,
+    supportPhone: f.support_phone,
+    supportEmail: f.support_email
+  });
+  setState({
+    developerContact: f.dev_contact,
+    supportPhone: f.support_phone,
+    supportEmail: f.support_email
+  });
   showToast('Settings saved successfully.', 'success');
-  await auditLog('SETTINGS_UPDATE', 'System developer contact updated');
+  await auditLog('SETTINGS_UPDATE', 'System contact information updated');
 }
 
 export async function doSendSupportTicketImpl(ev) {

@@ -217,9 +217,11 @@ export async function loadData() {
 
     if (settingsData && settingsData.success && settingsData.settings) {
       const serverSettings = settingsData.settings;
-      if (serverSettings.developerContact) {
-        await secureSet(STORAGE_KEYS.settings, { developerContact: serverSettings.developerContact });
-      }
+      await secureSet(STORAGE_KEYS.settings, { 
+        developerContact: serverSettings.developerContact,
+        supportPhone: serverSettings.supportPhone,
+        supportEmail: serverSettings.supportEmail
+      });
     }
   } catch (error) {
     console.warn('Failed to load from API, using localStorage:', error);
@@ -234,9 +236,17 @@ export async function loadData() {
   }
 
   // Settings
-  const settingsObj = await secureGet(STORAGE_KEYS.settings, { developerContact: 'MMU Tech Team: devSupport@mmu.ac.ug | 0756188401' });
+  const settingsObj = await secureGet(STORAGE_KEYS.settings, { 
+    developerContact: 'MMU Tech Team: devSupport@mmu.ac.ug | 0756188401',
+    supportPhone: '0756188401',
+    supportEmail: 'devSupport@mmu.ac.ug'
+  });
   import('./state.js').then(module => {
-    module.setState({ developerContact: settingsObj.developerContact });
+    module.setState({ 
+      developerContact: settingsObj.developerContact,
+      supportPhone: settingsObj.supportPhone,
+      supportEmail: settingsObj.supportEmail
+    });
   });
 
   // Data Migration: Ensure existing hostels get the new managerPhone from seeds if missing
