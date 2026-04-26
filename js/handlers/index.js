@@ -1442,3 +1442,74 @@ export async function doSendSupportTicketImpl(ev) {
     }
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   EDIT STUDENT DATA
+──────────────────────────────────────────────────────────────────────────── */
+export async function doEditStudentData() {
+  const errDiv = document.getElementById('esErr');
+  errDiv.classList.add('hidden');
+
+  const bookingId = parseInt(document.getElementById('esBookingId').value, 10);
+  const phone = document.getElementById('esPhone').value.trim();
+  const course = document.getElementById('esCourse').value.trim();
+  const year = document.getElementById('esYear').value.trim();
+  const semester = document.getElementById('esSemester').value.trim();
+
+  if (!course || !year || !semester) {
+    errDiv.textContent = 'Please fill out course, year, and semester.';
+    errDiv.classList.remove('hidden');
+    return;
+  }
+
+  const b = bookings.find(x => x.id === bookingId);
+  if (!b) return;
+
+  b.phone = phone;
+  b.course = course;
+  b.year = year;
+  b.semester = semester;
+
+  try {
+    await saveData();
+    setState({ bookings: [...bookings] }); // trigger reactivity
+    window.App?.closeModal?.();
+    showToast('Student details updated.', 'success');
+  } catch (e) {
+    errDiv.textContent = 'Failed to save changes.';
+    errDiv.classList.remove('hidden');
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RECORD PAYMENT
+──────────────────────────────────────────────────────────────────────────── */
+export async function doRecordPayment() {
+  const errDiv = document.getElementById('rpErr');
+  errDiv.classList.add('hidden');
+
+  const bookingId = parseInt(document.getElementById('rpBookingId').value, 10);
+  const amountStr = document.getElementById('rpAmount').value.trim();
+  const amount = parseInt(amountStr, 10);
+
+  if (!amountStr || isNaN(amount) || amount <= 0) {
+    errDiv.textContent = 'Please enter a valid amount.';
+    errDiv.classList.remove('hidden');
+    return;
+  }
+
+  const b = bookings.find(x => x.id === bookingId);
+  if (!b) return;
+
+  b.balancePaid = (b.balancePaid || 0) + amount;
+
+  try {
+    await saveData();
+    setState({ bookings: [...bookings] }); // trigger reactivity
+    window.App?.closeModal?.();
+    showToast('Payment recorded successfully.', 'success');
+  } catch (e) {
+    errDiv.textContent = 'Failed to save payment.';
+    errDiv.classList.remove('hidden');
+  }
+}

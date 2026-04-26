@@ -33,6 +33,7 @@ import {
   toggleHostelExpand, doSearchHostels,
   doUpdateDeveloperContact,
   doSendSupportTicketImpl,
+  doEditStudentData, doRecordPayment,
 } from './handlers/index.js';
 
 /* Render engine */
@@ -107,6 +108,7 @@ window.App = Object.freeze({
 
   /* ── Booking flow ────────────────────────────────────────────────────── */
   openBooking, bStep1, bStep2, confirmBooking, lookupBooking,
+  doEditStudentData, doRecordPayment,
 
   /* ── Image upload ────────────────────────────────────────────────────── */
   handleImgUpload, handleDrop, clearImg, previewMap, liveVal,

@@ -632,6 +632,7 @@ export function renderAdmin() {
 
   <!-- Tab switcher -->
   <div class="flex flex-wrap gap-2 mb-6">
+    ${!isSystemAdmin ? `<button class="tab-btn ${tab==='dashboard' ? 'active' : ''}" onclick="App.setState({ adminTab: 'dashboard' })">📊 Dashboard</button>` : ''}
     <button class="tab-btn ${tab==='hostels'  ? 'active' : ''}" onclick="App.setState({ adminTab: 'hostels' })">🏢 Hostels</button>
     <button class="tab-btn ${tab==='bookings' ? 'active' : ''}" onclick="App.setState({ adminTab: 'bookings' })">📅 Bookings</button>
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='managers' ? 'active' : ''}" onclick="App.setState({ adminTab: 'managers' }); App.ensureManagersLoaded();">👥 Managers</button>` : ''}
@@ -644,6 +645,72 @@ export function renderAdmin() {
     ${isSystemAdmin ? `<button class="tab-btn ${tab==='settings' ? 'active' : ''}" onclick="App.setState({ adminTab: 'settings' })">⚙️ Settings</button>` : ''}
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.go('security')">🔐 Security</button>` : ''}
   </div>
+
+  ${tab === 'dashboard' ? `
+  <div class="bg-white rounded-xl shadow-card p-5 mb-6">
+    <h3 class="text-g text-lg mb-4">Manager Dashboard</h3>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      ${[['Hostels',visibleHostels.length,'🏢'],['Total Rooms',s.t,'🚪'],['Available',s.a,'✅'],['Booked',s.b,'🔴']].map(([l,v,ic])=>
+        `<div class="bg-green-50 rounded-xl p-4 text-center border border-green-100">
+          <div class="text-2xl mb-1">${ic}</div>
+          <div class="text-2xl font-bold text-g">${v}</div>
+          <div class="text-xs text-gray-500">${l}</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="border rounded-xl p-4">
+        <h4 class="font-bold text-g mb-3">Recent Bookings</h4>
+        <div class="space-y-3">
+          ${visibleBookings.slice(0, 5).map(b => {
+             const h = visibleHostels.find(x => x.id === b.hostelId);
+             const r = h?.rooms.find(x => x.id === b.roomId);
+             return `<div class="text-sm p-3 bg-gray-50 rounded border flex justify-between items-center">
+               <div>
+                 <div class="font-semibold">${e(b.studentName)}</div>
+                 <div class="text-xs text-gray-500">${e(h?.name)} - Room ${e(r?.number)}</div>
+               </div>
+               <span class="px-2 py-1 rounded text-xs ${b.status==='confirmed'?'bg-green-100 text-green-800':'bg-yellow-100 text-yellow-800'}">${e(b.status)}</span>
+             </div>`;
+          }).join('')}
+          ${visibleBookings.length === 0 ? '<div class="text-xs text-gray-400">No bookings found.</div>' : ''}
+        </div>
+        <button onclick="App.setState({ adminTab: 'bookings' })" class="text-xs text-blue-600 mt-3 hover:underline w-full text-center block">View all bookings</button>
+      </div>
+
+      <div class="border rounded-xl p-4">
+         <h4 class="font-bold text-g mb-3">Financial Overview</h4>
+         ${(() => {
+            let totalCollected = 0;
+            let totalBalance = 0;
+            visibleHostels.forEach(h => {
+              (h.rooms || []).forEach(r => {
+                 const b = visibleBookings.find(x => x.hostelId === h.id && x.roomId === r.id && x.status === 'confirmed');
+                 if (r.status === 'booked') {
+                   totalCollected += (r.confirmationFee || 50000) + (b?.balancePaid || 0);
+                   totalBalance += (r.price || 0) - (r.confirmationFee || 50000) - (b?.balancePaid || 0);
+                 }
+              });
+            });
+            return `
+              <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600">Total Collected:</span>
+                  <span class="font-bold text-green-700">UGX ${totalCollected.toLocaleString()}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600">Pending Balances:</span>
+                  <span class="font-bold text-red-600">UGX ${totalBalance.toLocaleString()}</span>
+                </div>
+              </div>
+            `;
+         })()}
+         <button onclick="App.setState({ adminTab: 'finances' })" class="text-xs text-blue-600 mt-5 hover:underline w-full text-center block">View full ledger</button>
+      </div>
+    </div>
+  </div>
+  ` : ''}
 
   ${tab === 'hostels' ? `
   <!-- Stats -->
@@ -810,6 +877,7 @@ export function renderAdmin() {
 
         if (r.status !== 'available') {
             roomDetails.push({
+                bookingId: b?.id,
                 hostelName: h.name,
                 roomNumber: r.number,
                 studentName: b?.studentName || r.bookedBy || 'Unknown',
@@ -928,6 +996,9 @@ export function renderAdmin() {
                     <span class="px-2 py-0.5 rounded-full font-bold uppercase ${d.status==='booked'?'badge-ok':'bg-yellow-100 text-yellow-800'}" style="font-size: 9px;">
                       ${e(d.status)}
                     </span>
+                    ${d.balance > 0 && d.bookingId ? `
+                    <button onclick="App.openModal('recordPayment', { bookingId: '${d.bookingId}' })" class="btn-g btn-sm mt-2 block w-full text-center" style="font-size: 9px; padding: 4px;">Record Pay</button>
+                    ` : ''}
                   </td>
                 </tr>
               `).join('')}
@@ -1050,9 +1121,12 @@ export function renderAdmin() {
             <td class="text-xs text-gray-500">${e(bh?.name || '—')}</td>
             <td><span class="text-xs px-2 py-0.5 rounded-full font-semibold ${status==='active'?'badge-ok':'badge-warn'}">${e(status)}</span></td>
             <td>
-              ${b.userId
-                ? `<button onclick="App.doUpdateUserStatus(${Number(b.userId)}, '${nextSt}')" class="text-xs font-semibold ${status==='active'?'text-red-500':'text-green-600'} hover:underline">${status==='active'?'Suspend':'Activate'}</button>`
-                : '<span class="text-xs text-gray-300">—</span>'}
+              <div class="action-row flex-col gap-1">
+                <button onclick="App.openModal('editStudentData', { bookingId: '${e(b.id)}' })" class="text-xs text-g font-semibold hover:underline">✏️ Edit</button>
+                ${b.userId
+                  ? `<button onclick="App.doUpdateUserStatus(${Number(b.userId)}, '${nextSt}')" class="text-xs font-semibold ${status==='active'?'text-red-500':'text-green-600'} hover:underline">${status==='active'?'Suspend':'Activate'}</button>`
+                  : '<span class="text-xs text-gray-300">—</span>'}
+              </div>
             </td>
           </tr>
         `);

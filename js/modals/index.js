@@ -43,6 +43,8 @@ function modalContent() {
     case 'editManager':   return modalEditManager();
     case 'delManagerConf': return modalDelManager();
     case 'camera':        return modalCamera();
+    case 'editStudentData': return modalEditStudentData();
+    case 'recordPayment':   return modalRecordPayment();
     default:              return '';
   }
 }
@@ -918,6 +920,92 @@ function modalCamera() {
     
     <div class="flex justify-center mt-2">
       <button onclick="App.stopCamera()" class="text-sm text-gray-500 hover:underline">Cancel</button>
+    </div>
+  </div>`;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   EDIT STUDENT DATA
+──────────────────────────────────────────────────────────────────────────── */
+export function modalEditStudentData() {
+  const bArr = window.__mmuBookings__ ?? [];
+  const booking = bArr.find(b => String(b.id) === String(state.modalData?.bookingId));
+  if (!booking) return '<div class="p-6 text-center text-gray-400">Booking not found.</div>';
+
+  return `
+  ${mHead('Edit Student Details', '✏️')}
+  <div class="p-5 space-y-4">
+    <input type="hidden" id="esBookingId" value="${booking.id}">
+    <div>
+      <label class="lbl">Phone Number</label>
+      <input id="esPhone" type="tel" class="inp" value="${e(booking.phone || '')}">
+    </div>
+    <div>
+      <label class="lbl">Course</label>
+      <input id="esCourse" type="text" class="inp" value="${e(booking.course || '')}">
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="lbl">Year</label>
+        <select id="esYear" class="inp">
+          <option value="">Select year</option>
+          ${STUDY_YEARS.map(y => `<option value="${y}"${booking.year === y ? ' selected' : ''}>${y}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="lbl">Semester</label>
+        <select id="esSemester" class="inp">
+          <option value="">Select semester</option>
+          ${SEMESTERS.map(s => `<option value="${s}"${booking.semester === s ? ' selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div id="esErr" class="err-txt hidden bg-red-50 p-2 rounded"></div>
+    <div class="flex gap-3 pt-2">
+      <button onclick="App.closeModal()" class="btn-out flex-1">Cancel</button>
+      <button onclick="App.doEditStudentData()" class="btn-g flex-1">💾 Save Changes</button>
+    </div>
+  </div>`;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RECORD PAYMENT
+──────────────────────────────────────────────────────────────────────────── */
+export function modalRecordPayment() {
+  const bArr = window.__mmuBookings__ ?? [];
+  const booking = bArr.find(b => String(b.id) === String(state.modalData?.bookingId));
+  if (!booking) return '<div class="p-6 text-center text-gray-400">Booking not found.</div>';
+
+  const h = getHostel(booking.hostelId);
+  const r = h?.rooms.find(rm => rm.id === booking.roomId);
+  const total = Number(r?.price || 0);
+  const conf = Number(r?.confirmationFee || 0);
+  const prevPaid = Number(booking.balancePaid || 0);
+  const balance = total - conf - prevPaid;
+
+  return `
+  ${mHead('Record Payment', '💰')}
+  <div class="p-5 space-y-4">
+    <div class="bg-gray-50 p-3 rounded text-sm space-y-1">
+      <div><span class="text-gray-500">Student:</span> <b>${e(booking.studentName)}</b></div>
+      <div><span class="text-gray-500">Room:</span> <b>${e(r?.number)}</b></div>
+      <div><span class="text-gray-500">Total Price:</span> <b>${formatPrice(total)}</b></div>
+      <div><span class="text-gray-500">Already Paid:</span> <b>${formatPrice(conf + prevPaid)}</b> <span class="text-xs text-gray-400">(incl. Conf. Fee)</span></div>
+      <div class="pt-2 mt-2 border-t font-bold text-g text-base">Remaining Balance: ${formatPrice(balance)}</div>
+    </div>
+
+    <input type="hidden" id="rpBookingId" value="${booking.id}">
+    <input type="hidden" id="rpPrevPaid" value="${prevPaid}">
+    
+    <div>
+      <label class="lbl">New Payment Amount (UGX) *</label>
+      <input id="rpAmount" type="number" min="0" max="${balance > 0 ? balance : 2000000}" class="inp" placeholder="e.g. 50000">
+    </div>
+    
+    <div id="rpErr" class="err-txt hidden bg-red-50 p-2 rounded"></div>
+    <div class="flex gap-3 pt-2">
+      <button onclick="App.closeModal()" class="btn-out flex-1">Cancel</button>
+      <button onclick="App.doRecordPayment()" class="btn-g flex-1" ${balance <= 0 ? 'disabled' : ''}>${balance <= 0 ? 'Fully Paid' : '✅ Add Payment'}</button>
     </div>
   </div>`;
 }
