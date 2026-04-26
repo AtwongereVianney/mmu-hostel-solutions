@@ -1451,6 +1451,7 @@ export async function doEditStudentData() {
   errDiv.classList.add('hidden');
 
   const bookingId = parseInt(document.getElementById('esBookingId').value, 10);
+  const regNo = document.getElementById('esRegNo').value.trim().toUpperCase();
   const phone = document.getElementById('esPhone').value.trim();
   const course = document.getElementById('esCourse').value.trim();
   const year = document.getElementById('esYear').value.trim();
@@ -1465,6 +1466,7 @@ export async function doEditStudentData() {
   const b = bookings.find(x => x.id === bookingId);
   if (!b) return;
 
+  b.regNo = regNo;
   b.phone = phone;
   b.course = course;
   b.year = year;

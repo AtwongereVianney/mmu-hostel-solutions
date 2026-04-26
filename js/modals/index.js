@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { state, hostels }        from '../state.js';
+import { state, hostels, bookings }        from '../state.js';
 import { e, formatPrice, getHostel, mapEmbedUrl, mapLinkUrl, hostelCoverHtml, starRatingHtml, roomPreviewHtml, backendAssetImgUrl } from '../utils.js';
 import { getCsrfToken, isLoginLocked, getBruteForceState } from '../security.js';
 import { ROOM_TYPES, FLOOR_OPTIONS, GENDER_OPTIONS, SEMESTERS, STUDY_YEARS } from '../data.js';
@@ -593,11 +593,8 @@ function modalSuccess() {
 ──────────────────────────────────────────────────────────────────────────── */
 function modalBookingSlip() {
   const { bookingId } = state.modalData;
-  const { bookings }  = (() => { const m = import.meta; return window.__mmuState__ ?? { bookings: [] }; })();
 
-  // Access bookings via the globally accessible state populated by handlers
-  const bArr    = window.__mmuBookings__ ?? [];
-  const booking = bArr.find(b => b.id === bookingId);
+  const booking = bookings.find(b => String(b.id) === String(bookingId));
 
   if (!booking) {
     // Fallback: render the slip from successMsg
@@ -928,17 +925,22 @@ function modalCamera() {
    EDIT STUDENT DATA
 ──────────────────────────────────────────────────────────────────────────── */
 export function modalEditStudentData() {
-  const bArr = window.__mmuBookings__ ?? [];
-  const booking = bArr.find(b => String(b.id) === String(state.modalData?.bookingId));
+  const booking = bookings.find(b => String(b.id) === String(state.modalData?.bookingId));
   if (!booking) return '<div class="p-6 text-center text-gray-400">Booking not found.</div>';
 
   return `
   ${mHead('Edit Student Details', '✏️')}
   <div class="p-5 space-y-4">
     <input type="hidden" id="esBookingId" value="${booking.id}">
-    <div>
-      <label class="lbl">Phone Number</label>
-      <input id="esPhone" type="tel" class="inp" value="${e(booking.phone || '')}">
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="lbl">Registration Number</label>
+        <input id="esRegNo" type="text" class="inp uppercase" value="${e(booking.regNo || '')}">
+      </div>
+      <div>
+        <label class="lbl">Phone Number</label>
+        <input id="esPhone" type="tel" class="inp" value="${e(booking.phone || '')}">
+      </div>
     </div>
     <div>
       <label class="lbl">Course</label>
@@ -972,8 +974,7 @@ export function modalEditStudentData() {
    RECORD PAYMENT
 ──────────────────────────────────────────────────────────────────────────── */
 export function modalRecordPayment() {
-  const bArr = window.__mmuBookings__ ?? [];
-  const booking = bArr.find(b => String(b.id) === String(state.modalData?.bookingId));
+  const booking = bookings.find(b => String(b.id) === String(state.modalData?.bookingId));
   if (!booking) return '<div class="p-6 text-center text-gray-400">Booking not found.</div>';
 
   const h = getHostel(booking.hostelId);
