@@ -1,0 +1,12 @@
+.git
+.gitignore
+.gitmodules
+node_modules
+new-hostel/vendor
+scratch
+debug-user-payload.json
+package-lock.json
+*.md
+.vscode
+.idea
+.env
