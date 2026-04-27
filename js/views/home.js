@@ -38,11 +38,34 @@ export function renderHome() {
     }
     .hero-text { flex: 1; min-width: 220px; }
     .hero-badge {
-      display: inline-flex; align-items: center; gap: .35rem;
-      background: rgba(240,180,41,.15); border: 1px solid rgba(240,180,41,.35);
-      border-radius: 999px; padding: .18rem .75rem;
-      margin-bottom: .55rem; font-size: .67rem; font-weight: 700;
-      letter-spacing: .09em; text-transform: uppercase; color: #f0b429;
+      display: inline-flex; align-items: center; gap: .6rem;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 100px; padding: .45rem 1.1rem;
+      margin-bottom: 1.25rem; font-size: .72rem; font-weight: 600;
+      color: #fff; letter-spacing: .04em;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      animation: hero-badge-in 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .hero-badge .status-dot {
+      width: 6px; height: 6px; background: #4ade80; border-radius: 50%;
+      position: relative;
+    }
+    .hero-badge .status-dot::after {
+      content: ''; position: absolute; inset: -3px; border-radius: 50%;
+      background: inherit; opacity: 0.4; animation: dot-pulse 2s infinite;
+    }
+    .hero-badge .separator {
+      width: 4px; height: 4px; background: rgba(255,255,255,0.3); border-radius: 50%;
+    }
+    @keyframes dot-pulse {
+      0% { transform: scale(1); opacity: 0.4; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
+    @keyframes hero-badge-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .hero-h1 {
       margin: 0 0 .35rem 0;
@@ -124,7 +147,12 @@ export function renderHome() {
 
       <!-- Left: Text -->
       <div class="hero-text">
-        <div class="hero-badge">🏔 Fort Portal, Uganda &nbsp;·&nbsp; MMU Campus</div>
+        <div class="hero-badge">
+          <div class="status-dot"></div>
+          <span>Fort Portal, Uganda</span>
+          <div class="separator"></div>
+          <span style="color: #f0b429; font-weight: 800;">MMU Campus</span>
+        </div>
         <h1 class="hero-h1">Find Your Perfect <span style="color:#f0b429;">Student Hostel</span></h1>
         <p class="hero-sub">Secure accommodation near MMU &nbsp;·&nbsp; ⚡ Instant booking &nbsp;·&nbsp; 📱 Mobile money</p>
         <button class="hero-btn" onclick="App.go('hostels')">Browse Hostels <span>→</span></button>
