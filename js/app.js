@@ -34,6 +34,9 @@ import {
   doUpdateDeveloperContact,
   doSendSupportTicketImpl,
   doEditStudentData, doRecordPayment,
+  toggleRolePermissions, doSaveRolePermissions, doSyncRolePermissionsToUsers,
+  togglePermissionRoles, doSavePermissionRoles,
+  doBulkSelectRolePermissions, doBulkSelectPermissionRoles,
 } from './handlers/index.js';
 
 /* Render engine */
@@ -98,6 +101,9 @@ window.App = Object.freeze({
 
   ensureManagersLoaded, ensureRolesLoaded, ensurePermissionsLoaded, ensureUsersLoaded,
   doAddRole, doAddPermission, doSeedPermissions, doAssignUserAccess, doAssignHostelManager,
+  toggleRolePermissions, doSaveRolePermissions, doSyncRolePermissionsToUsers,
+  togglePermissionRoles, doSavePermissionRoles,
+  doBulkSelectRolePermissions, doBulkSelectPermissionRoles,
 
   /* ── Hostel CRUD ─────────────────────────────────────────────────────── */
   doAddHostel, doEditHostel, doDelHostel,

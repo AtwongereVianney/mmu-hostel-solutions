@@ -1101,8 +1101,46 @@ export function renderAdmin() {
     ${!state.rolesLoading && state.roles.length === 0 ? '<p class="text-gray-400 text-sm">No roles yet.</p>' : ''}
     ${!state.rolesLoading && state.roles.length > 0 ? `
       <div class="overflow-x-auto">
-        <table class="w-full"><thead class="tbl-hd"><tr><th>ID</th><th>Name</th></tr></thead>
-          <tbody>${state.roles.map(r => `<tr class="tbl-row"><td>${r.id}</td><td>${e(r.name)}</td></tr>`).join('')}</tbody>
+        <table class="w-full">
+          <thead class="tbl-hd"><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead>
+          <tbody>${state.roles.map(r => {
+            const isExpanded = (state.expandedRolePermissions || []).includes(r.id);
+            const rolePerms = (state.rolePermissions || {})[r.id] || [];
+            return `
+            <tr class="tbl-row">
+              <td class="text-xs text-gray-400">${r.id}</td>
+              <td class="font-semibold text-g">${e(r.name)}</td>
+              <td>
+                <div class="action-row">
+                  <button onclick="App.toggleRolePermissions(${r.id})" class="text-xs text-blue-600 font-semibold hover:underline">🛡️ ${isExpanded ? 'Close' : 'Manage Permissions'}</button>
+                  ${isExpanded ? `<button onclick="App.doSyncRolePermissionsToUsers(${r.id})" class="text-xs text-orange-600 font-semibold hover:underline">🔄 Sync to All Users</button>` : ''}
+                </div>
+              </td>
+            </tr>
+            ${isExpanded ? `
+            <tr>
+              <td colspan="3" class="bg-gray-50 p-4 border-b">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="text-xs font-bold text-gray-500 uppercase">Assign Permissions to ${e(r.name)} Role:</div>
+                  <div class="flex gap-2">
+                    <button onclick="App.doBulkSelectRolePermissions(${r.id}, true)" class="text-[10px] bg-g text-white px-2 py-1 rounded hover:opacity-90 transition-opacity">Select All</button>
+                    <button onclick="App.doBulkSelectRolePermissions(${r.id}, false)" class="text-[10px] bg-gray-400 text-white px-2 py-1 rounded hover:bg-gray-500 transition-colors">Deselect All</button>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                  ${(state.permissions || []).map(p => {
+                    const hasPerm = rolePerms.some(rp => rp.id === p.id);
+                    return `
+                    <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-g transition-colors">
+                      <input type="checkbox" id="rPerm_${r.id}_${p.id}" ${hasPerm ? 'checked' : ''} onchange="App.doSaveRolePermissions(${r.id})">
+                      ${e(p.name)}
+                    </label>`;
+                  }).join('')}
+                </div>
+                <div class="text-[10px] text-gray-400 italic">Changes are saved automatically. Click "Sync to All Users" to update existing user permissions.</div>
+              </td>
+            </tr>` : ''}
+          `;}).join('')}</tbody>
         </table>
       </div>` : ''}
   </div>
@@ -1120,8 +1158,44 @@ export function renderAdmin() {
     ${!state.permissionsLoading && state.permissions.length === 0 ? '<p class="text-gray-400 text-sm">No permissions yet.</p>' : ''}
     ${!state.permissionsLoading && state.permissions.length > 0 ? `
       <div class="overflow-x-auto">
-        <table class="w-full"><thead class="tbl-hd"><tr><th>ID</th><th>Name</th></tr></thead>
-          <tbody>${state.permissions.map(p => `<tr class="tbl-row"><td>${p.id}</td><td>${e(p.name)}</td></tr>`).join('')}</tbody>
+        <table class="w-full">
+          <thead class="tbl-hd"><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead>
+          <tbody>${state.permissions.map(p => {
+            const isExpanded = (state.expandedPermissionRoles || []).includes(p.id);
+            const permRoles = (state.permissionRoles || {})[p.id] || [];
+            return `
+            <tr class="tbl-row">
+              <td class="text-xs text-gray-400">${p.id}</td>
+              <td class="font-mono text-xs text-g">${e(p.name)}</td>
+              <td>
+                <div class="action-row">
+                  <button onclick="App.togglePermissionRoles(${p.id})" class="text-xs text-blue-600 font-semibold hover:underline">👥 ${isExpanded ? 'Close' : 'Manage Roles'}</button>
+                </div>
+              </td>
+            </tr>
+            ${isExpanded ? `
+            <tr>
+              <td colspan="3" class="bg-blue-50 p-4 border-b">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="text-xs font-bold text-blue-800 uppercase">Assign Roles to "${e(p.name)}":</div>
+                  <div class="flex gap-2">
+                    <button onclick="App.doBulkSelectPermissionRoles(${p.id}, true)" class="text-[10px] bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">Select All</button>
+                    <button onclick="App.doBulkSelectPermissionRoles(${p.id}, false)" class="text-[10px] bg-gray-400 text-white px-2 py-1 rounded hover:bg-gray-500">Deselect All</button>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  ${(state.roles || []).map(r => {
+                    const hasRole = permRoles.some(pr => pr.id === r.id);
+                    return `
+                    <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-blue-800 transition-colors">
+                      <input type="checkbox" id="pRole_${p.id}_${r.id}" ${hasRole ? 'checked' : ''} onchange="App.doSavePermissionRoles(${p.id})">
+                      ${e(r.name)}
+                    </label>`;
+                  }).join('')}
+                </div>
+              </td>
+            </tr>` : ''}
+          `;}).join('')}</tbody>
         </table>
       </div>` : ''}
   </div>

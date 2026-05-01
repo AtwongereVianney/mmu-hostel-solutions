@@ -6,7 +6,7 @@
 'use strict';
 
 import { state, setState, hostels, bookings, setBookings } from '../state.js';
-import { saveData, loadData, createUser, updateUserStatus, deleteUser, deleteHostel, deleteRoom, deleteBooking, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, saveUserProfile, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials, saveSystemSettings, sendSupportEmail }  from '../storage.js';
+import { saveData, loadData, createUser, updateUserStatus, deleteUser, deleteHostel, deleteRoom, deleteBooking, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, saveUserProfile, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials, saveSystemSettings, sendSupportEmail, loadRolePermissions, saveRolePermissions, syncRolePermissionsToUsers, loadPermissionRoles, savePermissionRoles }  from '../storage.js';
 
 import { showToast } from '../components/toast.js';
 import {
@@ -1516,4 +1516,99 @@ export async function doRecordPayment() {
     errDiv.textContent = 'Failed to save payment.';
     errDiv.classList.remove('hidden');
   }
+}
+
+export async function toggleRolePermissions(roleId) {
+  const current = state.expandedRolePermissions || [];
+  const next = current.includes(roleId) ? current.filter(id => id !== roleId) : [...current, roleId];
+  
+  if (next.includes(roleId)) {
+    const rolePerms = await loadRolePermissions(roleId);
+    const rolePermMap = { ...state.rolePermissions, [roleId]: rolePerms };
+    setState({ expandedRolePermissions: next, rolePermissions: rolePermMap });
+  } else {
+    setState({ expandedRolePermissions: next });
+  }
+}
+
+export async function doSaveRolePermissions(roleId) {
+  const permIds = (state.permissions || [])
+    .filter(p => document.getElementById(`rPerm_${roleId}_${p.id}`)?.checked)
+    .map(p => p.id);
+
+  const res = await saveRolePermissions(roleId, permIds);
+  if (res.success) {
+    showToast('Role permissions saved successfully');
+    // Refresh local role perms
+    const rolePerms = await loadRolePermissions(roleId);
+    setState({ rolePermissions: { ...state.rolePermissions, [roleId]: rolePerms } });
+  } else {
+    showToast(res.error || 'Failed to save role permissions', 'error');
+  }
+}
+
+export async function doSyncRolePermissionsToUsers(roleId) {
+  const rolePerms = state.rolePermissions[roleId] || [];
+  const permsObj = {};
+  rolePerms.forEach(p => permsObj[p.name] = true);
+
+  if (Object.keys(permsObj).length === 0) {
+    if (!confirm('This role has NO permissions. Syncing will remove all permissions from assigned users. Continue?')) return;
+  } else {
+    if (!confirm(`Are you sure you want to sync these ${Object.keys(permsObj).length} permissions to ALL users with this role?`)) return;
+  }
+
+  const res = await syncRolePermissionsToUsers(roleId, permsObj);
+  if (res.success) {
+    showToast('Successfully synced permissions to all users in this role');
+    await loadData(); // Refresh everything
+  } else {
+    showToast(res.error || 'Failed to sync permissions', 'error');
+  }
+}
+
+export async function togglePermissionRoles(permId) {
+  const current = state.expandedPermissionRoles || [];
+  const next = current.includes(permId) ? current.filter(id => id !== permId) : [...current, permId];
+  
+  if (next.includes(permId)) {
+    const permRoles = await loadPermissionRoles(permId);
+    const permRoleMap = { ...state.permissionRoles, [permId]: permRoles };
+    setState({ expandedPermissionRoles: next, permissionRoles: permRoleMap });
+  } else {
+    setState({ expandedPermissionRoles: next });
+  }
+}
+
+export async function doSavePermissionRoles(permId) {
+  const roleIds = (state.roles || [])
+    .filter(r => document.getElementById(`pRole_${permId}_${r.id}`)?.checked)
+    .map(r => r.id);
+
+  const res = await savePermissionRoles(permId, roleIds);
+  if (res.success) {
+    showToast('Permission roles updated successfully');
+    const permRoles = await loadPermissionRoles(permId);
+    setState({ permissionRoles: { ...state.permissionRoles, [permId]: permRoles } });
+  } else {
+    showToast(res.error || 'Failed to update permission roles', 'error');
+  }
+}
+
+export async function doBulkSelectRolePermissions(roleId, selectAll) {
+  const perms = state.permissions || [];
+  perms.forEach(p => {
+    const el = document.getElementById(`rPerm_${roleId}_${p.id}`);
+    if (el) el.checked = selectAll;
+  });
+  return doSaveRolePermissions(roleId);
+}
+
+export async function doBulkSelectPermissionRoles(permId, selectAll) {
+  const roles = state.roles || [];
+  roles.forEach(r => {
+    const el = document.getElementById(`pRole_${permId}_${r.id}`);
+    if (el) el.checked = selectAll;
+  });
+  return doSavePermissionRoles(permId);
 }

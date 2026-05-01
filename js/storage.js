@@ -107,6 +107,28 @@ export async function createPermission(name, business_id = 1, branch_id = 1) {
   return apiRequest('permissions', 'POST', { name, business_id, branch_id });
 }
 
+export async function loadRolePermissions(roleId) {
+  const perms = await apiRequest(`role-permissions?role_id=${roleId}`, 'GET');
+  return Array.isArray(perms) ? perms : [];
+}
+
+export async function saveRolePermissions(roleId, permissionIds) {
+  return apiRequest('role-permissions', 'POST', { role_id: roleId, permission_ids: permissionIds });
+}
+
+export async function loadPermissionRoles(permId) {
+  const roles = await apiRequest(`role-permissions?permission_id=${permId}`, 'GET');
+  return Array.isArray(roles) ? roles : [];
+}
+
+export async function savePermissionRoles(permId, roleIds) {
+  return apiRequest('role-permissions', 'POST', { permission_id: permId, role_ids: roleIds });
+}
+
+export async function syncRolePermissionsToUsers(roleId, permissions) {
+  return apiRequest('users', 'PUT', { bulk_sync_role_id: roleId, permissions });
+}
+
 export async function seedDefaultPermissions(business_id = 1, branch_id = 1) {
   return apiRequest('permissions', 'POST', { seed_defaults: true, business_id, branch_id });
 }
