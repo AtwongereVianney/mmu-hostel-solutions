@@ -8,7 +8,7 @@
 
 'use strict';
 
-import { state } from '../state.js';
+import { state, bookings, hostels } from '../state.js';
 
 export function renderNav() {
   const { view, adminMode, userRole } = state;
@@ -16,8 +16,19 @@ export function renderNav() {
   const isStudent = userRole === 'student';
   const isLoggedIn = !!adminMode || !!userRole;
 
+  const pendingCount = (bookings || []).filter(b => {
+    if (b.status !== 'pending') return false;
+    if (isSystemAdmin) return true;
+    if (userRole === 'hostel_owner') {
+        return (state.assignedHostelIds || []).some(hId => Number(hId) === Number(b.hostelId));
+    }
+    return false;
+  }).length;
+
+  const badgeHtml = pendingCount > 0 ? `<span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">${pendingCount}</span>` : '';
+
   const adminLinks = adminMode
-    ? `<button onclick="App.go('admin')"    class="nav-a ${view==='admin'    ?'active':''}">Admin</button>
+    ? `<button onclick="App.go('admin')"    class="nav-a ${view==='admin'    ?'active':''}">Admin ${badgeHtml}</button>
        ${isSystemAdmin ? `<button onclick="App.go('security')" class="nav-a ${view==='security' ?'active':''}">🔐 Security</button>` : ''}
        <button onclick="App.logout()"       class="text-red-300 text-xs border border-red-400 px-2 py-1 rounded font-semibold hover:text-red-100">Logout</button>`
     : `${isLoggedIn ? '' : `<button onclick="App.openModal('adminLogin')" class="text-white text-xs border border-white border-opacity-30 px-3 py-1 rounded-full hover:bg-white hover:bg-opacity-10">Login</button>`}`;
@@ -62,7 +73,10 @@ export function renderNav() {
       ${isLoggedIn ? `<button onclick="App.go('profile')" class="nav-a text-left py-1">👤 Profile</button>` : ''}
       <button onclick="App.go('help')" class="nav-a text-left py-1">❓ Help & Support</button>
       ${adminMode
-        ? `<button onclick="App.go('admin')"    class="nav-a text-left py-1">⚙️ Admin</button>
+        ? `<button onclick="App.go('admin')"    class="nav-a text-left py-1 flex items-center justify-between">
+             <span>⚙️ Admin</span>
+             ${badgeHtml}
+           </button>
            ${isSystemAdmin ? `<button onclick="App.go('security')" class="nav-a text-left py-1">🔐 Security</button>` : ''}
            <button onclick="App.logout()"       class="text-red-300 text-left text-sm py-1">🚪 Logout</button>`
         : `${isStudent

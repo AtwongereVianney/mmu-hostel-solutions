@@ -1076,7 +1076,9 @@ export function lookupBooking() {
 
   const found = bookings.filter(b => b.regNo.toLowerCase() === raw.toLowerCase());
   if (found.length) {
-    resEl.innerHTML = `<div class="space-y-3">${found.map(bookingCardHtml).join('')}</div>`;
+    resEl.innerHTML = `<div class="space-y-3">${found
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true }))
+      .map(bookingCardHtml).join('')}</div>`;
   } else {
     resEl.innerHTML = `<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-yellow-700 text-sm">No booking found for <b>${escapeHtml(raw)}</b>.</div>`;
   }

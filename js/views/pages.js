@@ -260,7 +260,9 @@ export function renderMyBookings() {
 
   ${bookings.length ? `
   <h3 class="text-g text-lg mb-3 mt-6">All Bookings (${bookings.length})</h3>
-  <div class="space-y-3">${bookings.map(bookingCardHtml).join('')}</div>` : ''}
+  <div class="space-y-3">${bookings
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true }))
+    .map(bookingCardHtml).join('')}</div>` : ''}
   `}
   ` : ''}
 
@@ -309,7 +311,7 @@ export function renderStudentDashboard() {
 
   const mine = bookings
     .filter(b => (b.email || '').toLowerCase() === (state.userEmail || '').toLowerCase())
-    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true }));
   const latest = mine[0] || null;
   const hostel = latest ? getHostel(latest.hostelId) : null;
   const room = latest && hostel ? (hostel.rooms || []).find(r => r.id === latest.roomId) : null;
@@ -618,6 +620,21 @@ export function renderAdmin() {
     setTimeout(() => window.App?.ensureUsersLoaded?.(), 0);
   }
 
+  const pendingBookings = (visibleBookings || []).filter(b => b.status === 'pending');
+  const pendingCount = pendingBookings.length;
+  const approvalAlert = pendingCount > 0 ? `
+    <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center justify-between shadow-sm animate-fade-in">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-xl animate-bounce">🔔</div>
+        <div>
+          <h4 class="font-bold text-red-800 text-sm">Action Required: ${pendingCount} Pending Approval${pendingCount > 1 ? 's' : ''}</h4>
+          <p class="text-xs text-red-600">New booking requests are awaiting your review.</p>
+        </div>
+      </div>
+      <button onclick="App.setState({ adminTab: 'bookings' })" class="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors shadow-md">Review Now</button>
+    </div>
+  ` : '';
+
   return `
   <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
     <div>
@@ -646,6 +663,8 @@ export function renderAdmin() {
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.go('security')">🔐 Security</button>` : ''}
   </div>
 
+  ${tab === 'dashboard' ? approvalAlert : ''}
+
   ${tab === 'dashboard' ? `
   <div class="bg-white rounded-xl shadow-card p-5 mb-6">
     <h3 class="text-g text-lg mb-4">Manager Dashboard</h3>
@@ -663,7 +682,9 @@ export function renderAdmin() {
       <div class="border rounded-xl p-4">
         <h4 class="font-bold text-g mb-3">Recent Bookings</h4>
         <div class="space-y-3">
-          ${visibleBookings.slice(0, 5).map(b => {
+          ${visibleBookings
+            .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true }))
+            .slice(0, 5).map(b => {
              const h = visibleHostels.find(x => x.id === b.hostelId);
              const r = h?.rooms.find(x => x.id === b.roomId);
              return `<div class="text-sm p-3 bg-gray-50 rounded border flex justify-between items-center">
@@ -738,7 +759,13 @@ export function renderAdmin() {
             <span class="chevron-toggle ${isExpanded ? 'expanded' : ''}">▼</span>
             ${hostelThumbnailHtml(h)}
             <div>
-              <div class="font-bold text-g">${e(h.name)}</div>
+              <div class="flex items-center gap-2">
+                <div class="font-bold text-g">${e(h.name)}</div>
+                ${(() => {
+                  const pCount = (bookings || []).filter(b => Number(b.hostelId) === Number(h.id) && b.status === 'pending').length;
+                  return pCount > 0 ? `<span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse shadow-sm">🔔 ${pCount} Pending</span>` : '';
+                })()}
+              </div>
               <div class="text-xs text-gray-500">${e(h.distance)} · ${e(h.gender)}</div>
               ${h.location?.address ? `<div class="text-xs text-gray-400">📍 ${e(h.location.address.slice(0,45))}</div>` : ''}
               <div class="flex items-center gap-2 mt-1" onclick="event.stopPropagation()">
@@ -786,7 +813,7 @@ export function renderAdmin() {
                 <td>${e(r.floor)}</td>
                 <td class="font-semibold text-gold">${formatPrice(r.price)}</td>
                 <td class="text-xs text-g font-semibold">${formatPrice(r.confirmationFee || 0)}</td>
-                <td><span class="text-xs px-2 py-0.5 rounded-full font-semibold ${r.status==='available'?'badge-ok':r.status==='pending'?'bg-yellow-100 text-yellow-800':'badge-err'}">${r.status}</span></td>
+                <td><span class="text-xs px-2 py-0.5 rounded-full font-semibold ${r.status==='available'?'badge-ok':r.status==='pending'?'bg-red-500 text-white animate-pulse shadow-sm':'badge-err'}">${r.status}</span></td>
                 <td class="text-xs text-gray-500">${e(r.bookedBy||'—')}</td>
                 <td>
                   <div class="action-row">
@@ -821,7 +848,9 @@ export function renderAdmin() {
           <th>Hostel / Room</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th>
         </tr></thead>
         <tbody>
-          ${visibleBookings.map(b => {
+          ${visibleBookings
+            .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true }))
+            .map(b => {
             const bh = getHostel(b.hostelId);
             const br = bh?.rooms.find(r => r.id === b.roomId);
             return `<tr class="tbl-row">

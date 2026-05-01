@@ -144,4 +144,11 @@ window.Sec = Object.freeze({ sanitize });
 
   // Mark loading complete — skeleton cards replaced by real hostel cards
   setState({ loading: false });
+
+  // Background polling for new bookings (every 60s)
+  setInterval(async () => {
+    if (state.adminMode || state.userRole === 'hostel_owner') {
+      await loadData();
+    }
+  }, 60000);
 })();
