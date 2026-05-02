@@ -38,6 +38,8 @@ import {
   togglePermissionRoles, doSavePermissionRoles,
   doBulkSelectRolePermissions, doBulkSelectPermissionRoles,
   openRoomPreview,
+  doOnboardTenant, loadPendingPayments, doVerifyPaymentManual, doUploadPaymentProof,
+  loadChatMessages, doSendMessage
 } from './handlers/index.js';
 
 /* Render engine */
@@ -133,6 +135,14 @@ window.App = Object.freeze({
   searchHostels: doSearchHostels, // 🔍 Hostel search
   doUpdateDeveloperContact,
   doSendSupportTicket: (ev) => { if(ev) ev.preventDefault(); doSendSupportTicketImpl(ev); },
+  
+  /* ── Lovable Features ──────────────────────────────────────────────── */
+  doOnboardTenant,
+  loadPendingPayments,
+  doVerifyPaymentManual,
+  doUploadPaymentProof,
+  loadChatMessages,
+  doSendMessage,
 });
 
 window.Sec = Object.freeze({ sanitize });
@@ -157,6 +167,9 @@ window.Sec = Object.freeze({ sanitize });
   setInterval(async () => {
     if (state.adminMode || state.userRole === 'hostel_owner') {
       await loadData();
+    }
+    if (state.userId && (state.currentPage === 'help' || state.adminTab === 'messages' || (state.currentPage === 'dashboard' && state.userRole === 'student'))) {
+      await loadChatMessages();
     }
   }, 60000);
 })();

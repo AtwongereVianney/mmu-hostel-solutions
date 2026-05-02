@@ -46,6 +46,7 @@ function modalContent() {
     case 'editStudentData': return modalEditStudentData();
     case 'recordPayment':   return modalRecordPayment();
     case 'roomPreview':     return modalRoomPreview();
+    case 'uploadPaymentProof': return modalUploadPaymentProof();
     default:              return '';
   }
 }
@@ -1063,5 +1064,29 @@ function modalRoomPreview() {
         ? `<button onclick="App.openBooking(${h.id},${room.id})" class="btn-g flex-1 py-3 font-bold">📅 Book Room ${room.number}</button>`
         : `<div class="flex-1 bg-gray-100 text-gray-400 rounded-xl flex items-center justify-center font-bold">Not Available</div>`}
     </div>
+  </div>`;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   UPLOAD PAYMENT PROOF (Lovable Feature)
+──────────────────────────────────────────────────────────────────────────── */
+function modalUploadPaymentProof() {
+  const { bookingId, amount } = state.modalData;
+  return `
+  ${mHead('Upload Payment Proof', '💳')}
+  <div class="p-5">
+    <form onsubmit="App.doUploadPaymentProof(event, ${bookingId}, ${amount})" class="space-y-4">
+      <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+        <h4 class="font-bold text-yellow-800 mb-1">Confirmation Fee: ${formatPrice(amount)}</h4>
+        <p class="text-xs text-yellow-700">Please pay to the hostel's bank account and upload the receipt/screenshot here.</p>
+      </div>
+      
+      <div>
+        <label class="lbl font-bold">Upload Image (JPG/PNG)</label>
+        <input type="file" id="proofImg" accept="image/*" class="w-full text-sm mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" required />
+      </div>
+      
+      <button type="submit" class="btn-g w-full font-bold shadow-hover py-3">Submit Proof</button>
+    </form>
   </div>`;
 }

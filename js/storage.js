@@ -31,7 +31,7 @@ const STORAGE_KEYS = Object.freeze({
 });
 
 /* ── API helpers ────────────────────────────────────────────────────────── */
-async function apiRequest(endpoint, method = 'GET', data = null) {
+export async function apiRequest(endpoint, method = 'GET', data = null) {
   try {
     const url = `${API_BASE_URL}/${endpoint}`;
     const options = {

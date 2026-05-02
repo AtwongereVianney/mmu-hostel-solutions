@@ -352,106 +352,166 @@ export function renderStudentDashboard() {
   return `
   <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
     <div>
-      <h2 class="text-g text-2xl">Student Dashboard</h2>
-      <p class="text-gray-500 text-sm">Welcome ${e(state.adminUser || 'Student')}. Track your booking status and hostel details.</p>
+      <h2 class="text-g text-2xl font-bold">My Tenancy Dashboard</h2>
+      <p class="text-gray-500 text-sm">Welcome ${e(state.adminUser || 'Student')}. Manage your room, payments, and communications.</p>
     </div>
     <div class="flex gap-2">
-      <button onclick="App.go('profile')" class="btn-out text-sm">👤 My Profile</button>
-      <button onclick="App.go('hostels')" class="btn-g">Browse Hostels</button>
+      <button onclick="App.go('profile')" class="btn-out text-sm shadow-sm hover:shadow-md transition-shadow">👤 My Profile</button>
+      <button onclick="App.go('hostels')" class="btn-g shadow-sm hover:shadow-md transition-shadow">Browse Hostels</button>
     </div>
   </div>
 
-  <!-- Booking Quick Stats -->
-  <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-    <div class="bg-white rounded-xl shadow-card p-4">
-      <div class="text-xs text-gray-500">Total Bookings</div>
-      <div class="text-2xl font-bold text-g">${mine.length}</div>
-    </div>
-    <div class="bg-white rounded-xl shadow-card p-4">
-      <div class="text-xs text-gray-500">Pending</div>
-      <div class="text-2xl font-bold text-yellow-600">${pendingCount}</div>
-    </div>
-    <div class="bg-white rounded-xl shadow-card p-4">
-      <div class="text-xs text-gray-500">Confirmed</div>
-      <div class="text-2xl font-bold text-green-700">${confirmedCount}</div>
-    </div>
-  </div>
-
-  <!-- Financial Overview -->
-  <div class="mb-6">
-    <h3 class="text-g text-lg mb-3 flex items-center gap-2">💰 My Finances</h3>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white rounded-xl shadow-card p-4 border-l-4 border-gray-400">
-        <div class="text-xs text-gray-500 mb-1">Total Billed</div>
-        <div class="text-xl font-bold text-gray-700">${formatPrice(totalBilled)}</div>
-        <div class="text-[10px] text-gray-400 mt-1">Total cost of all bookings</div>
-      </div>
-      <div class="bg-white rounded-xl shadow-card p-4 border-l-4 border-yellow-500">
-        <div class="text-xs text-gray-500 mb-1">Total Paid (Fees)</div>
-        <div class="text-xl font-bold text-yellow-600">${formatPrice(totalPaid)}</div>
-        <div class="text-[10px] text-gray-400 mt-1">Confirmed confirmation fees</div>
-      </div>
-      <div class="bg-white rounded-xl shadow-card p-4 border-l-4 border-blue-600">
-        <div class="text-xs text-gray-500 mb-1">Balance Due on Arrival</div>
-        <div class="text-xl font-bold text-blue-700">${formatPrice(totalBalanceDue)}</div>
-        <div class="text-[10px] text-gray-400 mt-1">To be cleared at the hostel</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid md:grid-cols-2 gap-6 mb-6">
-    <!-- Latest Booking -->
-    <div class="bg-white rounded-xl shadow-card p-5">
-      <h3 class="text-g text-lg mb-3">Latest Booking</h3>
-      ${latest ? `
-        <div class="grid md:grid-cols-2 gap-3 text-sm">
-          <div><span class="text-gray-500">Reference:</span> <b>#${e(formatRef(latest.id))}</b></div>
-          <div><span class="text-gray-500">Status:</span> <b class="${latest.status==='confirmed'?'text-green-700':'text-yellow-700'}">${e(latest.status)}</b></div>
-          <div><span class="text-gray-500">Hostel:</span> <b>${e(hostel?.name || '—')}</b></div>
-          <div><span class="text-gray-500">Room:</span> <b>${e(room?.number || '—')} ${room?.type ? `(${e(room.type)})` : ''}</b></div>
-          <div><span class="text-gray-500">Date:</span> <b>${e(latest.date || '—')}</b></div>
-          <div><span class="text-gray-500">Course:</span> <b>${e(latest.course || '—')}</b></div>
+  <div class="grid md:grid-cols-3 gap-6 mb-8">
+    <!-- Active Tenancy Card (Latest Booking) -->
+    <div class="md:col-span-2 bg-green-50 border border-green-100 rounded-2xl shadow-card p-6 text-black relative overflow-hidden">
+      <!-- Decorative background elements -->
+      <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-green-100 opacity-50 pointer-events-none"></div>
+      <div class="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 rounded-full bg-green-100 opacity-50 pointer-events-none"></div>
+      
+      <div class="flex items-start justify-between relative z-10">
+        <div>
+          <h3 class="text-black uppercase tracking-wider text-xs font-bold mb-1">Current Room</h3>
+          ${latest ? `
+            <h2 class="text-3xl font-bold mb-1 text-black">${e(hostel?.name || '—')}</h2>
+            <p class="text-lg text-black mb-4">Room ${e(room?.number || '—')} ${room?.type ? `(${e(room.type)})` : ''}</p>
+            
+            <div class="flex flex-wrap gap-4 mt-6">
+              <div class="bg-white rounded-xl p-3 flex-1 min-w-[120px] shadow-sm border border-gray-100">
+                <div class="text-xs text-black mb-1">Booking Status</div>
+                <div class="font-bold flex items-center gap-2 text-black">
+                  <span class="w-2 h-2 rounded-full ${latest.status==='confirmed'?'bg-green-500':'bg-yellow-500'} animate-pulse"></span>
+                  ${e(latest.status).toUpperCase()}
+                </div>
+              </div>
+              <div class="bg-white rounded-xl p-3 flex-1 min-w-[120px] shadow-sm border border-gray-100">
+                <div class="text-xs text-black mb-1">Move-in Date</div>
+                <div class="font-bold text-black">${e(latest.date || '—')}</div>
+              </div>
+              <div class="bg-white rounded-xl p-3 flex-1 min-w-[120px] shadow-sm border border-gray-100">
+                <div class="text-xs text-black mb-1">Reference</div>
+                <div class="font-bold text-black">#${e(formatRef(latest.id))}</div>
+              </div>
+            </div>
+            
+            <div class="mt-6 flex gap-3">
+              ${latest.status === 'pending' ? `
+                <button onclick="App.openModal('uploadPaymentProof', { bookingId: ${latest.id}, amount: ${room?.confirmationFee || 50000} })" class="bg-yellow-500 hover:bg-yellow-400 text-black px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg transition-transform hover:-translate-y-1">💳 Upload Payment Proof</button>
+              ` : ''}
+              <button onclick="document.getElementById('supMessage')?.focus()" class="bg-white hover:bg-gray-50 text-black px-5 py-2.5 rounded-xl font-bold text-sm transition-all border border-gray-200 shadow-sm">💬 Message Manager</button>
+            </div>
+          ` : `
+            <h2 class="text-2xl font-bold mb-4 text-black opacity-50">No Active Booking</h2>
+            <p class="text-black max-w-sm mb-6 opacity-80">You don't have a room booked yet. Browse our selection of premium hostels to secure your spot for the semester.</p>
+            <button onclick="App.go('hostels')" class="bg-g text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all">Find a Room</button>
+          `}
         </div>
-        ${hostel ? `<div class="mt-4"><button class="btn-g w-full" onclick="App.go('hostelDetail', { selH: ${hostel.id}, fType: 'All' })">View Hostel Details</button></div>` : ''}
-      ` : '<p class="text-gray-400 text-sm">No booking found for your account yet.</p>'}
+      </div>
     </div>
 
-    <!-- Payment Ledger -->
-    <div class="bg-white rounded-xl shadow-card p-5">
-      <h3 class="text-g text-lg mb-3">Payment Ledger</h3>
-      ${financeLedger.length ? `
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-gray-50 text-gray-500 uppercase font-semibold">
-              <tr>
-                <th class="px-2 py-2">Hostel / Room</th>
-                <th class="px-2 py-2 text-right">Billed</th>
-                <th class="px-2 py-2 text-right">Paid</th>
-                <th class="px-2 py-2 text-right">Balance</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              ${financeLedger.map(l => `
-                <tr class="hover:bg-gray-50 transition-colors">
-                  <td class="px-2 py-2">
-                    <div class="font-bold text-g">${e(l.hostelName)}</div>
-                    <div class="text-gray-400">#${e(l.roomNumber)} · ${e(formatRef(l.id))}</div>
-                  </td>
-                  <td class="px-2 py-2 text-right font-semibold">${formatPrice(l.price)}</td>
-                  <td class="px-2 py-2 text-right text-yellow-600 font-bold">${formatPrice(l.paid)}</td>
-                  <td class="px-2 py-2 text-right text-blue-700 font-bold">${formatPrice(l.balance)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+    <!-- Quick Finance Summary -->
+    <div class="bg-white rounded-2xl shadow-card p-6 flex flex-col justify-between relative overflow-hidden">
+      <div class="absolute right-0 top-0 w-24 h-24 bg-yellow-50 rounded-bl-full -z-0"></div>
+      <div class="relative z-10">
+        <h3 class="text-gray-500 font-bold uppercase tracking-wider text-xs mb-4">Financial Overview</h3>
+        <div class="mb-5">
+          <div class="text-4xl font-bold text-gray-800 mb-1">${formatPrice(totalBalanceDue)}</div>
+          <div class="text-xs text-red-500 font-bold bg-red-50 inline-block px-2 py-1 rounded-md">Outstanding Balance</div>
         </div>
-      ` : '<p class="text-gray-400 text-sm text-center py-4">No financial records yet.</p>'}
+        
+        <div class="space-y-3">
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-gray-500">Total Billed</span>
+            <span class="font-bold">${formatPrice(totalBilled)}</span>
+          </div>
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-gray-500">Total Paid</span>
+            <span class="font-bold text-green-600">${formatPrice(totalPaid)}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-6 pt-4 border-t border-gray-100">
+        <button onclick="App.setState({ studentTab: 'ledger' })" class="text-g font-bold text-sm hover:underline flex items-center justify-center w-full gap-2">View Full Ledger <span>→</span></button>
+      </div>
     </div>
   </div>
 
-  <div class="bg-white rounded-xl shadow-card p-5">
-    <h3 class="text-g text-lg mb-3">My Booking History</h3>
-    ${mine.length ? `<div class="space-y-3">${mine.map(bookingCardHtml).join('')}</div>` : '<p class="text-gray-400 text-sm">No bookings yet.</p>'}
+  <div class="grid md:grid-cols-3 gap-6">
+    <!-- Booking History -->
+    <div class="md:col-span-2 bg-white rounded-2xl shadow-card p-6">
+      <div class="flex items-center justify-between mb-4 border-b pb-4">
+        <h3 class="text-g text-xl font-bold">Booking History</h3>
+        <span class="text-xs text-gray-500 font-semibold bg-gray-100 px-3 py-1 rounded-full">${mine.length} Total</span>
+      </div>
+      ${mine.length ? `<div class="space-y-4">${mine.map(bookingCardHtml).join('')}</div>` : `
+        <div class="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+          <div class="text-3xl mb-3 opacity-50">📂</div>
+          <p class="text-gray-400 font-semibold">Your booking history will appear here.</p>
+        </div>
+      `}
+    </div>
+
+    <!-- Dashboard Chat Widget -->
+    <div class="md:col-span-1">
+      <div class="bg-white border border-gray-200 rounded-2xl shadow-card overflow-hidden flex flex-col h-[500px]">
+        <div class="bg-g text-white p-4">
+          <h3 class="text-lg font-bold flex items-center gap-2">💬 Message Manager</h3>
+          <p class="text-xs text-green-200">Talk to your hostel manager or support.</p>
+        </div>
+        
+        <div class="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3" id="dashChatContainer">
+          ${(() => {
+            if (state.chatMessages === undefined) {
+               setTimeout(() => App.loadChatMessages(), 0);
+               return '<div class="text-center text-sm text-gray-400 my-auto">Loading messages...</div>';
+            }
+            const thread = state.chatMessages && state.chatMessages.length > 0 ? state.chatMessages[0] : null;
+            
+            if (!thread) {
+              return `
+                <div class="flex flex-col gap-1 max-w-[85%] self-start">
+                  <div class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-2xl rounded-tl-none shadow-sm text-sm">
+                    Hello ${e(state.adminUser || state.userEmail || 'Student')}! You can message your hostel manager here.
+                  </div>
+                  <div class="text-[10px] text-gray-400 ml-1">System Support</div>
+                </div>
+              `;
+            }
+            
+            let html = `
+              <div class="flex flex-col gap-1 max-w-[85%] self-end items-end">
+                <div class="bg-green-600 text-black border-green-700 border px-4 py-2 rounded-2xl rounded-tr-none shadow-sm text-sm">
+                  ${e(thread.message)}
+                </div>
+                <div class="text-[10px] text-black mr-1">${e(thread.user_name)} · ${new Date(thread.created_at).toLocaleString()}</div>
+              </div>
+            `;
+            
+            (thread.replies || []).forEach(r => {
+              const isMe = r.user_id === state.userId;
+              html += `
+                <div class="flex flex-col gap-1 max-w-[85%] ${isMe ? 'self-end items-end' : 'self-start'}">
+                  <div class="${isMe ? 'bg-green-600 text-black border-green-700 rounded-tr-none' : 'bg-white border-gray-200 text-black rounded-tl-none'} border px-4 py-2 rounded-2xl shadow-sm text-sm">
+                    ${e(r.message)}
+                  </div>
+                  <div class="text-[10px] text-black ${isMe ? 'mr-1' : 'ml-1'}">${e(r.sender_name)} · ${new Date(r.created_at).toLocaleString()}</div>
+                </div>
+              `;
+            });
+            return html;
+          })()}
+        </div>
+        
+        <div class="p-3 bg-white border-t border-gray-200">
+          <form onsubmit="App.doSendMessage(event, ${state.chatMessages && state.chatMessages.length > 0 ? state.chatMessages[0].id : 0})" class="flex gap-2">
+            <input id="supMessage" type="text" class="inp flex-1 text-sm rounded-full py-2 px-4" placeholder="Type a message..." required autocomplete="off" />
+            <button id="supBtn" type="submit" class="bg-g hover:bg-green-700 text-white rounded-full w-10 h-10 flex items-center justify-center transition-transform hover:scale-105" title="Send">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 ml-1"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -515,43 +575,77 @@ export function renderHelp() {
         </div>
       </div>
 
-      <!-- Contact Support Form -->
+      <!-- Contact Support Form / Chat UI -->
       <div class="md:col-span-1">
-        <div class="bg-g text-white rounded-2xl shadow-card p-6 sticky top-24">
-          <h3 class="text-xl mb-4 flex items-center gap-2">✉️ Contact Support</h3>
-          <form onsubmit="App.doSendSupportTicket(event)" class="space-y-4">
-            <div>
-              <label class="text-xs uppercase font-bold text-green-200 mb-1 block">Your Name</label>
-              <input id="supName" type="text" class="inp-dark w-full" placeholder="Full Name" value="${e(state.adminUser || '')}" required/>
-            </div>
-            <div>
-              <label class="text-xs uppercase font-bold text-green-200 mb-1 block">Email Address</label>
-              <input id="supEmail" type="email" class="inp-dark w-full" placeholder="email@mmu.ac.ug" value="${e(state.userEmail || '')}" required/>
-            </div>
-            <div>
-              <label class="text-xs uppercase font-bold text-green-200 mb-1 block">Subject</label>
-              <select id="supSubject" class="inp-dark w-full">
-                <option>Booking Issue</option>
-                <option>Payment Problem</option>
-                <option>Account Access</option>
-                <option>Other / Feedback</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-xs uppercase font-bold text-green-200 mb-1 block">Message</label>
-              <textarea id="supMessage" class="inp-dark w-full h-24" placeholder="How can we help?" required></textarea>
-            </div>
-            <button id="supBtn" type="submit" class="btn-gold w-full mt-2 font-bold py-3">
-              <span>🚀 Send Message</span>
-            </button>
-          </form>
-
-          <div class="mt-8 pt-6 border-t border-green-700">
-            <h4 class="text-xs uppercase font-bold text-green-200 mb-3">Direct Support</h4>
-            <div class="space-y-2 text-sm">
-              <div class="flex items-center gap-2">📞 <a href="tel:${e(state.supportPhone || '0756188401')}" class="hover:underline">${e(state.supportPhone || '0756188401')}</a></div>
-              <div class="flex items-center gap-2">✉️ <a href="mailto:${e(state.supportEmail || 'devSupport@mmu.ac.ug')}" class="hover:underline">${e(state.supportEmail || 'devSupport@mmu.ac.ug')}</a></div>
-            </div>
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-card overflow-hidden flex flex-col h-[500px]">
+          <div class="bg-g text-white p-4">
+            <h3 class="text-lg font-bold flex items-center gap-2">💬 Support Chat</h3>
+            <p class="text-xs text-green-200">Talk to the technical team or manager.</p>
+          </div>
+          
+          <div class="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3" id="chatContainer">
+            ${(() => {
+              if (!isAuthenticated()) {
+                return '<div class="text-center text-sm text-gray-400 my-auto">Please <button onclick="App.openModal(\'adminLogin\')" class="text-g hover:underline font-bold">Log in</button> to use the chat.</div>';
+              }
+              if (state.chatMessages === undefined) {
+                 // Trigger load
+                 setTimeout(() => App.loadChatMessages(), 0);
+                 return '<div class="text-center text-sm text-gray-400 my-auto">Loading messages...</div>';
+              }
+              const thread = state.chatMessages && state.chatMessages.length > 0 ? state.chatMessages[0] : null;
+              
+              if (!thread) {
+                return `
+                  <div class="flex flex-col gap-1 max-w-[85%] self-start">
+                    <div class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-2xl rounded-tl-none shadow-sm text-sm">
+                      Hello ${e(state.adminUser || state.userEmail || 'Student')}! How can we assist you today? Send a message below to start a chat.
+                    </div>
+                    <div class="text-[10px] text-gray-400 ml-1">System Support</div>
+                  </div>
+                `;
+              }
+              
+              let html = `
+                <div class="flex flex-col gap-1 max-w-[85%] self-end items-end">
+                  <div class="bg-green-600 text-black border-green-700 border px-4 py-2 rounded-2xl rounded-tr-none shadow-sm text-sm">
+                    ${e(thread.message)}
+                  </div>
+                  <div class="text-[10px] text-black mr-1">${e(thread.user_name)} · ${new Date(thread.created_at).toLocaleString()}</div>
+                </div>
+              `;
+              
+              (thread.replies || []).forEach(r => {
+                const isMe = r.user_id === state.userId;
+                html += `
+                  <div class="flex flex-col gap-1 max-w-[85%] ${isMe ? 'self-end items-end' : 'self-start'}">
+                    <div class="${isMe ? 'bg-green-600 text-black border-green-700 rounded-tr-none' : 'bg-white border-gray-200 text-black rounded-tl-none'} border px-4 py-2 rounded-2xl shadow-sm text-sm">
+                      ${e(r.message)}
+                    </div>
+                    <div class="text-[10px] text-black ${isMe ? 'mr-1' : 'ml-1'}">${e(r.sender_name)} · ${new Date(r.created_at).toLocaleString()}</div>
+                  </div>
+                `;
+              });
+              
+              return html;
+            })()}
+          </div>
+          
+          <div class="p-3 bg-white border-t border-gray-200">
+            <form onsubmit="App.doSendMessage(event, ${state.chatMessages && state.chatMessages.length > 0 ? state.chatMessages[0].id : 0})" class="flex gap-2">
+              <input id="supMessage" type="text" class="inp flex-1 text-sm rounded-full py-2 px-4" placeholder="Type a message..." ${!isAuthenticated() ? 'disabled' : ''} required autocomplete="off" />
+              <button id="supBtn" type="submit" class="bg-g hover:bg-green-700 text-white rounded-full w-10 h-10 flex items-center justify-center transition-transform hover:scale-105" ${!isAuthenticated() ? 'disabled' : ''} title="Send">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 ml-1"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              </button>
+            </form>
+          </div>
+        </div>
+        
+        <div class="mt-4 bg-white rounded-xl shadow-card p-4 text-center">
+          <h4 class="text-xs uppercase font-bold text-gray-500 mb-2">Direct Support</h4>
+          <div class="space-y-1 text-sm text-gray-600">
+            <div>📞 <a href="tel:${e(state.supportPhone || '0756188401')}" class="text-g hover:underline font-bold">${e(state.supportPhone || '0756188401')}</a></div>
+            <div>✉️ <a href="mailto:${e(state.supportEmail || 'devSupport@mmu.ac.ug')}" class="text-g hover:underline font-bold">${e(state.supportEmail || 'devSupport@mmu.ac.ug')}</a></div>
           </div>
         </div>
       </div>
@@ -632,7 +726,7 @@ export function renderAdmin() {
           <p class="text-xs text-red-600">New booking requests are awaiting your review.</p>
         </div>
       </div>
-      <button onclick="App.setState({ adminTab: 'bookings' })" class="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors shadow-md">Review Now</button>
+      <button onclick="App.setState({ adminTab: 'bookings' })" class="px-4 py-2 bg-red-600 text-black text-xs font-bold rounded-lg hover:bg-red-700 transition-colors shadow-md">Review Now</button>
     </div>
   ` : '';
 
@@ -653,12 +747,15 @@ export function renderAdmin() {
     ${!isSystemAdmin ? `<button class="tab-btn ${tab==='dashboard' ? 'active' : ''}" onclick="App.setState({ adminTab: 'dashboard' })">📊 Dashboard</button>` : ''}
     <button class="tab-btn ${tab==='hostels'  ? 'active' : ''}" onclick="App.setState({ adminTab: 'hostels' })">🏢 Hostels</button>
     <button class="tab-btn ${tab==='bookings' ? 'active' : ''}" onclick="App.setState({ adminTab: 'bookings' })">📅 Bookings</button>
+    ${!isSystemAdmin ? `<button class="tab-btn ${tab==='onboard' ? 'active' : ''}" onclick="App.setState({ adminTab: 'onboard' })">➕ Add Student</button>` : ''}
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='managers' ? 'active' : ''}" onclick="App.setState({ adminTab: 'managers' }); App.ensureManagersLoaded();">👥 Managers</button>` : ''}
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='roles' ? 'active' : ''}" onclick="App.setState({ adminTab: 'roles' }); App.ensureRolesLoaded();">🪪 Roles</button>` : ''}
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='permissions' ? 'active' : ''}" onclick="App.setState({ adminTab: 'permissions' }); App.ensurePermissionsLoaded();">🛡 Permissions</button>` : ''}
     ${state.adminMode && isSystemAdmin ? `<button class="tab-btn ${tab==='users' ? 'active' : ''}" onclick="App.setState({ adminTab: 'users' }); App.ensureUsersLoaded();">👤 Users</button>` : ''}
     ${(isSystemAdmin || can('view_users') || can('manage_users')) ? `<button class="tab-btn ${tab==='students' ? 'active' : ''}" onclick="App.setState({ adminTab: 'students' }); App.ensureUsersLoaded();">🎓 Students</button>` : ''}
     ${!isSystemAdmin ? `<button class="tab-btn ${tab==='finances' ? 'active' : ''}" onclick="App.setState({ adminTab: 'finances' })">💰 Finances</button>` : ''}
+    <button class="tab-btn ${tab==='payments' ? 'active' : ''}" onclick="App.setState({ adminTab: 'payments' })">💳 Verify Payments</button>
+    <button class="tab-btn ${tab==='messages' ? 'active' : ''}" onclick="App.setState({ adminTab: 'messages' }); App.loadChatMessages();">💬 Messages</button>
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.openModal('addManager', {})">➕ Add Users</button>` : ''}
     ${isSystemAdmin ? `<button class="tab-btn ${tab==='settings' ? 'active' : ''}" onclick="App.setState({ adminTab: 'settings' })">⚙️ Settings</button>` : ''}
     ${isSystemAdmin ? `<button class="tab-btn" onclick="App.go('security')">🔐 Security</button>` : ''}
@@ -1041,6 +1138,216 @@ export function renderAdmin() {
     </div>
     `;
   })() : ''}
+
+  <!-- Onboard Tab -->
+  ${tab === 'onboard' && !isSystemAdmin ? `
+  <div class="bg-white rounded-xl shadow-card p-6 max-w-2xl mx-auto border-t-4 border-g">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-12 h-12 bg-green-100 text-g rounded-full flex items-center justify-center text-2xl font-bold">➕</div>
+      <div>
+        <h3 class="text-g text-xl font-bold">Add Student Booking</h3>
+        <p class="text-xs text-gray-500">Manually onboard a student and create an approved booking.</p>
+      </div>
+    </div>
+    
+    <form onsubmit="App.doOnboardTenant(event)" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl font-bold text-gray-700">Student Name</label>
+          <input id="onName" class="inp" type="text" placeholder="John Doe" required />
+        </div>
+        <div>
+          <label class="lbl font-bold text-gray-700">Student Email</label>
+          <input id="onEmail" class="inp" type="email" placeholder="john@student.mmu.ac.ug" required />
+        </div>
+      </div>
+      <div>
+        <label class="lbl font-bold text-gray-700">Phone Number</label>
+        <input id="onPhone" class="inp" type="text" placeholder="07XXXXXXXX" required />
+      </div>
+      
+      <div class="border-t pt-4 mt-4">
+        <h4 class="font-bold text-g mb-3">Select Room</h4>
+        <select id="onRoomId" class="inp mb-4" required>
+          <option value="">-- Choose Hostel & Room --</option>
+          ${visibleHostels.map(h => {
+             return `<optgroup label="${e(h.name)}">` + 
+               (h.rooms || []).filter(r => r.status === 'available').map(r => 
+                 `<option value="${r.id}">Room ${e(r.number)} (${e(r.type)}) - ${formatPrice(r.price)}</option>`
+               ).join('') + 
+             `</optgroup>`;
+          }).join('')}
+        </select>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="lbl font-bold text-gray-700">Start Date</label>
+            <input id="onStart" class="inp" type="date" required value="${today()}" />
+          </div>
+          <div>
+            <label class="lbl font-bold text-gray-700">End Date</label>
+            <input id="onEnd" class="inp" type="date" required />
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-gray-50 p-4 rounded-xl text-sm text-gray-600 mt-4 border border-gray-200">
+        <p>💡 The student will receive an email with their default login credentials (Student123!) and their booking will be automatically marked as <b>approved</b>.</p>
+      </div>
+      
+      <button type="submit" class="btn-g w-full py-3 text-lg font-bold shadow-hover mt-4">Complete Onboarding</button>
+    </form>
+  </div>
+  ` : ''}
+
+  <!-- Payments Tab -->
+  ${tab === 'payments' ? `
+  <div class="bg-white rounded-xl shadow-card p-6">
+    <div class="flex items-center justify-between mb-5 border-b pb-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xl font-bold">💳</div>
+        <div>
+          <h3 class="text-g text-xl font-bold">Manual Payment Verification</h3>
+          <p class="text-xs text-gray-500">Review and verify student payment proofs.</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="space-y-4">
+      ${(() => {
+        // Find bookings with pending manual payments. We simulate this by checking if there is a way to get payments.
+        // Since we don't have a payments array in state yet, I will show a placeholder or call an API.
+        // Actually, we can fetch pending payments from the backend using our new dashboard-stats or a specific endpoint.
+        // For now, if state.pendingPayments doesn't exist, we show a button to load them.
+        if (!state.pendingPaymentsLoaded && !state.pendingPaymentsLoading) {
+           setTimeout(() => App.loadPendingPayments(), 0);
+           return '<div class="text-center py-8 text-gray-400">Loading payment records...</div>';
+        }
+        if (state.pendingPaymentsLoading) {
+           return '<div class="text-center py-8 text-gray-400 animate-pulse">Loading payment records...</div>';
+        }
+        if (!state.pendingPayments || state.pendingPayments.length === 0) {
+           return `
+            <div class="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+              <div class="text-4xl mb-3 opacity-50">✅</div>
+              <h4 class="font-bold text-gray-500">All Caught Up</h4>
+              <p class="text-xs text-gray-400">There are no pending manual payments to verify.</p>
+            </div>
+           `;
+        }
+        return state.pendingPayments.map(p => `
+          <div class="flex flex-col md:flex-row gap-4 p-4 border rounded-xl hover:shadow-md transition-shadow bg-gray-50">
+            <div class="w-full md:w-48 h-32 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer" onclick="App.openImageModal('${e(p.proof_image_path)}')">
+              ${p.proof_image_path 
+                ? `<img src="${e(p.proof_image_path)}" class="w-full h-full object-cover hover:scale-105 transition-transform" />` 
+                : `<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">No Image</div>`}
+            </div>
+            <div class="flex-1 flex flex-col justify-between">
+              <div>
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <div class="font-bold text-g text-lg">${e(p.student_name)}</div>
+                    <div class="text-xs text-gray-500">Booking Ref: #${e(p.booking_id)} · Hostel: ${e(p.hostel_name)}</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-bold text-yellow-600 text-xl">${formatPrice(p.amount)}</div>
+                    <div class="text-[10px] text-gray-400">${new Date(p.payment_date).toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="flex gap-2 mt-4 justify-end border-t pt-3">
+                <button onclick="App.doVerifyPaymentManual(${p.id}, 'reject')" class="btn-out btn-sm" style="border-color:#ef4444;color:#ef4444">❌ Reject</button>
+                <button onclick="App.doVerifyPaymentManual(${p.id}, 'approve')" class="btn-g btn-sm bg-green-600">✅ Approve Payment</button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      })()}
+    </div>
+  </div>
+  ` : ''}
+
+  <!-- Messages Tab -->
+  ${tab === 'messages' ? `
+  <div class="bg-white rounded-xl shadow-card overflow-hidden flex" style="height: 600px;">
+    <!-- Left Column: Thread List -->
+    <div class="w-1/3 border-r border-gray-200 flex flex-col bg-gray-50">
+      <div class="p-4 bg-white border-b border-gray-200 flex justify-between items-center z-10 shadow-sm">
+        <h3 class="font-bold text-g text-lg">Conversations</h3>
+        <button onclick="App.loadChatMessages()" class="text-xs text-gray-500 hover:text-g" title="Refresh">🔄</button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-2 space-y-1">
+        ${!state.chatMessages ? '<div class="text-center py-8 text-sm text-gray-400">Loading...</div>' : ''}
+        ${state.chatMessages && state.chatMessages.length === 0 ? '<div class="text-center py-8 text-sm text-gray-400">No messages found.</div>' : ''}
+        ${state.chatMessages && state.chatMessages.length > 0 ? state.chatMessages.map(t => {
+          const isActive = state.activeAdminChatId === t.id;
+          const lastMsg = t.replies && t.replies.length > 0 ? t.replies[t.replies.length - 1] : t;
+          const dateStr = new Date(lastMsg.created_at).toLocaleDateString();
+          return `
+            <div onclick="App.setState({ activeAdminChatId: ${t.id} })" class="p-3 rounded-lg cursor-pointer transition-all ${isActive ? 'bg-green-100 border border-green-200' : 'hover:bg-gray-100 border border-transparent'}">
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-bold text-sm text-gray-800 truncate pr-2">${e(t.user_name)}</span>
+                <span class="text-[10px] text-black whitespace-nowrap">${dateStr}</span>
+              </div>
+              <div class="text-xs text-gray-500 truncate">${e(lastMsg.message)}</div>
+            </div>
+          `;
+        }).join('') : ''}
+      </div>
+    </div>
+    
+    <!-- Right Column: Active Chat -->
+    <div class="w-2/3 flex flex-col bg-white relative">
+      ${(() => {
+        if (!state.activeAdminChatId) {
+          return '<div class="m-auto text-gray-400 flex flex-col items-center"><div class="text-4xl mb-3 opacity-20">💬</div>Select a conversation to start messaging</div>';
+        }
+        
+        const thread = (state.chatMessages || []).find(t => t.id == state.activeAdminChatId);
+        if (!thread) return '<div class="m-auto text-red-400">Conversation not found.</div>';
+        
+        return `
+          <div class="p-4 bg-g text-white shadow-md z-10">
+            <h3 class="font-bold text-lg">${e(thread.user_name)}</h3>
+            <div class="text-xs text-green-200">Ticket #${thread.id} · ${e(thread.subject)}</div>
+          </div>
+          
+          <div class="flex-1 p-5 overflow-y-auto bg-gray-50 flex flex-col gap-4">
+            <!-- Initial Message -->
+            <div class="flex flex-col gap-1 max-w-[80%] self-start">
+              <div class="bg-white border border-gray-200 text-black px-4 py-3 rounded-2xl rounded-tl-none shadow-sm text-sm">
+                ${e(thread.message)}
+              </div>
+              <div class="text-[10px] text-black ml-1">${e(thread.user_name)} · ${new Date(thread.created_at).toLocaleString()}</div>
+            </div>
+            
+            <!-- Replies -->
+            ${(thread.replies || []).map(r => {
+              const isMe = r.user_id === state.userId;
+              return `
+                <div class="flex flex-col gap-1 max-w-[80%] ${isMe ? 'self-end items-end' : 'self-start'}">
+                  <div class="${isMe ? 'bg-green-600 text-black border-green-700 rounded-tr-none' : 'bg-white border-gray-200 text-black rounded-tl-none'} border px-4 py-3 rounded-2xl shadow-sm text-sm">
+                    ${e(r.message)}
+                  </div>
+                  <div class="text-[10px] text-black mx-1">${e(r.sender_name)} · ${new Date(r.created_at).toLocaleString()}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          
+          <div class="p-3 bg-white border-t border-gray-200">
+            <form onsubmit="App.doSendMessage(event, ${thread.id})" class="flex gap-2 relative">
+              <input type="text" id="chatReplyMsg_${thread.id}" class="inp flex-1 text-sm rounded-full py-3 px-5 pr-12 bg-gray-100 border-transparent focus:border-green-500 focus:bg-white" placeholder="Type your reply..." required autocomplete="off" />
+              <button type="submit" class="absolute right-2 top-2 bg-g hover:bg-green-700 text-white rounded-full w-8 h-8 flex items-center justify-center transition-transform hover:scale-105 shadow-sm" title="Send">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 ml-0.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              </button>
+            </form>
+          </div>
+        `;
+      })()}
+    </div>
+  </div>
+  ` : ''}
 
   <!-- Managers Tab -->
   ${tab === 'managers' && state.adminMode ? `

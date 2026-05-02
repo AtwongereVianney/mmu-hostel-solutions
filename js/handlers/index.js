@@ -6,7 +6,7 @@
 'use strict';
 
 import { state, setState, hostels, bookings, setBookings } from '../state.js';
-import { saveData, loadData, createUser, updateUserStatus, deleteUser, deleteHostel, deleteRoom, deleteBooking, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, saveUserProfile, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials, saveSystemSettings, sendSupportEmail, loadRolePermissions, saveRolePermissions, syncRolePermissionsToUsers, loadPermissionRoles, savePermissionRoles }  from '../storage.js';
+import { apiRequest, saveData, loadData, createUser, updateUserStatus, deleteUser, deleteHostel, deleteRoom, deleteBooking, loadUsers, loadRoles, loadPermissions, createRole, createPermission, updateUserAccess, saveUserProfile, seedDefaultPermissions, assignHostelOwner, loginUser, loadUserById, sendApprovedBookingCredentials, saveSystemSettings, sendSupportEmail, loadRolePermissions, saveRolePermissions, syncRolePermissionsToUsers, loadPermissionRoles, savePermissionRoles }  from '../storage.js';
 
 import { showToast } from '../components/toast.js';
 import {
@@ -1615,4 +1615,176 @@ export async function doBulkSelectPermissionRoles(permId, selectAll) {
 
 export function openRoomPreview(hostelId, roomId) {
   openModal('roomPreview', { hostelId, roomId });
+}
+
+export async function doOnboardTenant(event) {
+  event.preventDefault();
+  const name = document.getElementById('onName')?.value ?? '';
+  const email = document.getElementById('onEmail')?.value ?? '';
+  const phone = document.getElementById('onPhone')?.value ?? '';
+  const roomIdRaw = document.getElementById('onRoomId')?.value ?? '';
+  const startDate = document.getElementById('onStart')?.value ?? '';
+  const endDate = document.getElementById('onEnd')?.value ?? '';
+  
+  if (!name || !email || !roomIdRaw || !startDate || !endDate) {
+    showToast('Please fill in all required fields.', 'error');
+    return;
+  }
+  
+  const roomId = parseInt(roomIdRaw, 10);
+  const btn = event.target.querySelector('button[type="submit"]');
+  if (btn) btn.disabled = true;
+  
+  try {
+    const data = await apiRequest('onboard-tenant', 'POST', { name, email, phone, room_id: roomId, start_date: startDate, end_date: endDate });
+    if (data.success) {
+      showToast('Student onboarded successfully!', 'success');
+      await loadData(); // refresh hostels and bookings
+      App.setState({ adminTab: 'bookings' });
+    } else {
+      showToast(data.error || 'Failed to onboard student.', 'error');
+    }
+  } catch (e) {
+    showToast('Network error while onboarding student.', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+export async function loadPendingPayments() {
+  setState({ pendingPaymentsLoading: true });
+  try {
+    // We will fetch from API or filter existing. 
+    const data = await apiRequest('list-pending-payments');
+    if (Array.isArray(data)) {
+      setState({ pendingPayments: data, pendingPaymentsLoading: false, pendingPaymentsLoaded: true });
+    }
+  } catch (e) {
+    console.warn('Failed to load pending payments:', e);
+    setState({ pendingPaymentsLoading: false, pendingPaymentsLoaded: true });
+  }
+}
+
+export async function doVerifyPaymentManual(paymentId, action) {
+  if (!confirm(`Are you sure you want to ${action} this payment?`)) return;
+  try {
+    const data = await apiRequest('verify-payment-manual', 'POST', { payment_id: paymentId, action });
+    if (data.success) {
+      showToast(`Payment ${action}d successfully.`, 'success');
+      // Remove from list
+      const updated = (state.pendingPayments || []).filter(p => p.id !== paymentId);
+      setState({ pendingPayments: updated });
+    } else {
+      showToast(data.error || 'Action failed.', 'error');
+    }
+  } catch (e) {
+    showToast('Network error.', 'error');
+  }
+}
+
+export async function doUploadPaymentProof(event, bookingId, amount) {
+  event.preventDefault();
+  const fileInput = document.getElementById('proofImg');
+  if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+    showToast('Please select an image file.', 'error');
+    return;
+  }
+  
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append('proof_image', file);
+  formData.append('booking_id', bookingId);
+  formData.append('amount', amount);
+  
+  const btn = event.target.querySelector('button[type="submit"]');
+  if (btn) btn.disabled = true;
+  
+  try {
+    // Note: apiRequest currently only supports JSON. For file uploads, we'll keep using fetch but use API_BASE_URL.
+    // Actually, I'll just use the full URL here.
+    const baseUrl = window.location.port === '3000' ? 'http://localhost/mmu-hostel%20solutions/new-hostel/api.php' : './new-hostel/api.php';
+    const res = await fetch(`${baseUrl}/upload-payment-proof`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Payment proof uploaded successfully. Waiting for verification.', 'success');
+      App.closeModal();
+    } else {
+      showToast(data.error || 'Upload failed.', 'error');
+    }
+  } catch (e) {
+    showToast('Network error while uploading.', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+export async function loadChatMessages() {
+  if (!state.userId) return;
+  try {
+    const data = await apiRequest(`chat-messages?user_id=${state.userId}&role=${state.userRole || 'student'}`, 'GET');
+    if (data && !data.error) {
+      state.chatMessages = data;
+      setState({}); // Trigger re-render to update chat UI
+    }
+  } catch (e) {
+    console.error('Failed to load chat messages:', e);
+  }
+}
+
+export async function doSendMessage(ev, ticketId = 0) {
+  ev.preventDefault();
+  let input = document.getElementById(`chatReplyMsg_${ticketId}`);
+  if (!input) input = document.getElementById('supMessage');
+  const message = input ? input.value.trim() : '';
+  
+  if (!message) return;
+  
+  const btn = ev.target.querySelector('button[type="submit"]');
+  if (btn) btn.disabled = true;
+
+  try {
+    const payload = {
+      user_id: state.userId,
+      ticket_id: ticketId,
+      message: message
+    };
+    
+    const data = await apiRequest('chat-messages', 'POST', payload);
+    if (data.success) {
+      if (input) input.value = '';
+      
+      // Optimistically append the reply to state
+      if (!state.chatMessages) state.chatMessages = [];
+      
+      if (data.reply.is_new_ticket) {
+        state.chatMessages.unshift({
+          id: data.ticket_id,
+          user_id: state.userId,
+          subject: 'Chat',
+          message: message,
+          status: 'open',
+          created_at: data.reply.created_at,
+          user_name: data.reply.sender_name,
+          replies: []
+        });
+      } else {
+        const thread = state.chatMessages.find(t => t.id == ticketId);
+        if (thread) {
+          if (!thread.replies) thread.replies = [];
+          thread.replies.push(data.reply);
+        }
+      }
+      setState({});
+    } else {
+      showToast(data.error || 'Failed to send message', 'error');
+    }
+  } catch (e) {
+    console.error('doSendMessage Error:', e);
+    showToast('Network error or server failed to respond.', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
