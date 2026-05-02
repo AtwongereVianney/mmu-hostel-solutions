@@ -45,6 +45,7 @@ function modalContent() {
     case 'camera':        return modalCamera();
     case 'editStudentData': return modalEditStudentData();
     case 'recordPayment':   return modalRecordPayment();
+    case 'roomPreview':     return modalRoomPreview();
     default:              return '';
   }
 }
@@ -1007,6 +1008,60 @@ export function modalRecordPayment() {
     <div class="flex gap-3 pt-2">
       <button onclick="App.closeModal()" class="btn-out flex-1">Cancel</button>
       <button onclick="App.doRecordPayment()" class="btn-g flex-1" ${balance <= 0 ? 'disabled' : ''}>${balance <= 0 ? 'Fully Paid' : '✅ Add Payment'}</button>
+    </div>
+  </div>`;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ROOM PREVIEW
+   (Public view for detailed room info)
+──────────────────────────────────────────────────────────────────────────── */
+function modalRoomPreview() {
+  const h    = getHostel(state.modalData.hostelId);
+  const room = h?.rooms.find(r => r.id === state.modalData.roomId);
+  if (!h || !room) return '<div class="p-6 text-center text-gray-400">Room not found.</div>';
+
+  return `
+  ${mHead(`Room ${room.number} Details`, '🚪')}
+  <div class="p-5 space-y-5">
+    <div class="rounded-2xl overflow-hidden shadow-card">
+      ${roomPreviewHtml(room, h)}
+    </div>
+    
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+        <div class="text-xs text-gray-500 uppercase font-bold mb-1">Type</div>
+        <div class="text-lg font-bold text-g">${e(room.type)}</div>
+      </div>
+      <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+        <div class="text-xs text-gray-500 uppercase font-bold mb-1">Floor</div>
+        <div class="text-lg font-bold text-g">${e(room.floor || '1st')} Floor</div>
+      </div>
+    </div>
+
+    <div class="bg-green-50 rounded-2xl p-5 border border-green-100">
+      <h4 class="font-bold text-g mb-3 flex items-center gap-2">💰 Pricing Breakdown</h4>
+      <div class="space-y-3">
+        <div class="flex justify-between items-center pb-2 border-b border-green-200">
+          <span class="text-sm text-gray-600">Semester Rent</span>
+          <span class="text-xl font-bold text-g">${formatPrice(room.price)}</span>
+        </div>
+        <div class="flex justify-between items-center pb-2 border-b border-green-200">
+          <span class="text-sm text-gray-600">Confirmation Fee <br/><span class="text-[10px] text-gray-400 font-normal">(Non-refundable, secures booking)</span></span>
+          <span class="text-lg font-bold text-gold">${formatPrice(room.confirmationFee || 0)}</span>
+        </div>
+        <div class="flex justify-between items-center pt-1">
+          <span class="text-sm font-bold text-gray-700">Due on Check-in</span>
+          <span class="text-xl font-black text-blue-700">${formatPrice(room.price - (room.confirmationFee || 0))}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-3">
+      <button onclick="App.closeModal()" class="btn-out flex-1 py-3">Close</button>
+      ${room.status === 'available' 
+        ? `<button onclick="App.openBooking(${h.id},${room.id})" class="btn-g flex-1 py-3 font-bold">📅 Book Room ${room.number}</button>`
+        : `<div class="flex-1 bg-gray-100 text-gray-400 rounded-xl flex items-center justify-center font-bold">Not Available</div>`}
     </div>
   </div>`;
 }

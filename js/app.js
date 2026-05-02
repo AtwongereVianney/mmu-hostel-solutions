@@ -37,6 +37,7 @@ import {
   toggleRolePermissions, doSaveRolePermissions, doSyncRolePermissionsToUsers,
   togglePermissionRoles, doSavePermissionRoles,
   doBulkSelectRolePermissions, doBulkSelectPermissionRoles,
+  openRoomPreview,
 } from './handlers/index.js';
 
 /* Render engine */
@@ -104,6 +105,7 @@ window.App = Object.freeze({
   toggleRolePermissions, doSaveRolePermissions, doSyncRolePermissionsToUsers,
   togglePermissionRoles, doSavePermissionRoles,
   doBulkSelectRolePermissions, doBulkSelectPermissionRoles,
+  openRoomPreview,
 
   /* ── Hostel CRUD ─────────────────────────────────────────────────────── */
   doAddHostel, doEditHostel, doDelHostel,

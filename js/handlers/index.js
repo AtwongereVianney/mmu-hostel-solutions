@@ -1612,3 +1612,7 @@ export async function doBulkSelectPermissionRoles(permId, selectAll) {
   });
   return doSavePermissionRoles(permId);
 }
+
+export function openRoomPreview(hostelId, roomId) {
+  openModal('roomPreview', { hostelId, roomId });
+}

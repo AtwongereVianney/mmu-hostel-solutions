@@ -180,11 +180,12 @@ export function renderHostelDetail() {
             </div>
 
             <div class="p-4">
-              <!-- Icon chips -->
-              <div class="flex flex-wrap gap-2 mb-3">
-                <span class="chip">🛏 ${e(bedIcon(r.type))}</span>
-                <span class="chip">🏢 ${e(r.floor)} Floor</span>
-                ${r.type === 'Single' ? '<span class="chip">🚿 Private Bath</span>' : ''}
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex flex-wrap gap-2">
+                  <span class="chip">🛏 ${e(bedIcon(r.type))}</span>
+                  <span class="chip">🏢 ${e(r.floor)} Floor</span>
+                </div>
+                <button onclick="App.openRoomPreview(${h.id}, ${r.id})" class="text-xs text-blue-600 font-bold hover:underline">👁️ Preview</button>
               </div>
 
               <!-- Price breakdown -->
@@ -817,6 +818,7 @@ export function renderAdmin() {
                 <td class="text-xs text-gray-500">${e(r.bookedBy||'—')}</td>
                 <td>
                   <div class="action-row">
+                    <button onclick="App.openRoomPreview(${h.id}, ${r.id})" class="text-xs text-blue-600 font-semibold hover:underline">👁️ View</button>
                     ${(can('edit_room') || can('manage_rooms')) ? `<button onclick="App.requireAdmin() && App.openModal('editRoom', { hostelId:${h.id}, roomId:${r.id} })" class="text-xs text-g font-semibold hover:underline">✏️ Edit</button>` : ''}
                     ${r.status === 'booked' || r.status === 'pending'
                       ? ((can('release_room') || can('manage_rooms')) ? `<button onclick="App.requireAdmin() && App.releaseRoom(${h.id},${r.id})" class="text-xs text-blue-600 font-semibold hover:underline">↩ Release</button>` : '')
